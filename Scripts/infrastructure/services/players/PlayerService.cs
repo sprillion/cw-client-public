@@ -20,13 +20,23 @@ namespace infrastructure.services.users
 
         public void SetClientPlayer(Message message)
         {
-            var id = message.GetInt();
+            var playerId = message.GetInt();
+            var characterId = message.GetInt();
             var nickname = message.GetString();
             var position = message.GetVector3();
-            
-            ClientPlayer = new Player(id, nickname, position);
+            var isDead = message.GetBool();
+            var skin = message.GetInt();
+            var role = (PlayerRole)message.GetByte();
+
+            ClientPlayer = new Player(playerId, nickname, position, role);
             ClientPlayer.SetCharacter(_characterService.CurrentCharacter);
+            _characterService.CurrentCharacter.Id = characterId;
+            _characterService.SetMainSkin(skin);
             OnClientPlayerLoaded?.Invoke();
+            if (isDead)
+            {
+                _characterService.DeathCurrentPlayer();
+            }
         }
     }
 }

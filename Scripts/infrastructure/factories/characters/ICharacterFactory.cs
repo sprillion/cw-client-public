@@ -9,6 +9,5 @@ namespace factories.characters
         Character CreateCharacter();
         EnemyCharacter CreateEnemy(string nickname);
         CharacterStats CreateCharacterStats();
-        Potion GetPotion(Item item);
     }
 }

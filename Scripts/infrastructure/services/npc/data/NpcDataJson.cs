@@ -33,10 +33,4 @@ namespace infrastructure.services.npc
         public int Id;
         public int Count;
     }
-    
-    public enum CurrencyType : byte
-    {
-        Gold,
-        Diamonds,
-    }
 }

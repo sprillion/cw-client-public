@@ -1,8 +1,10 @@
 ﻿using System;
 using infrastructure.services.inventory.items;
 using TMPro;
+using ui.inventory.equipSlot;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace ui.inventory
@@ -24,13 +26,18 @@ namespace ui.inventory
         public Item CurrentItem { get; private set; }
 
         public event Action<UiItem> OnClickItem; 
+        public event Action OnRemove;
+
+        public static event Action<UiItem> OnItemSelected; 
         
-        public void Initialize(Item item, Transform movingParent)
+        public void Initialize(Item item, Transform movingParent, bool interactable = true)
         {
             CurrentItem = item;
             _movingParent = movingParent;
             _image.sprite = CurrentItem.Data.Icon;
+            _image.raycastTarget = interactable;
             CurrentItem.OnCountChange += SetCount;
+            _countText.gameObject.SetActive(CurrentItem.EquipSlotType is EquipSlotType.None);
             SetCount();
         }
 
@@ -40,22 +47,25 @@ namespace ui.inventory
             _canvasGroup.alpha = 1f;
             _canvasGroup.blocksRaycasts = true;
             CurrentItem.OnCountChange -= SetCount;
+            OnRemove?.Invoke();
             base.Release();
         }
 
         public void SetParent(Transform parent)
         {
-            transform.SetParent(parent);
+            SetParentPreserveScale(parent);
             transform.localPosition = Vector3.zero;
             _parentChanged = true;
         }
 
         public void OnBeginDrag(PointerEventData eventData)
         {
+            OnItemSelected?.Invoke(this);
+            
             if (!Draggable) return;
             
             _currentParent = transform.parent;
-            transform.SetParent(_movingParent);
+            SetParentPreserveScale(_movingParent);
             transform.SetAsLastSibling();
             _canvasGroup.alpha = 0.6f;
             _canvasGroup.blocksRaycasts = false;
@@ -65,7 +75,7 @@ namespace ui.inventory
         public void OnDrag(PointerEventData eventData)
         {
             if (!Draggable) return;
-            transform.position = Input.mousePosition;
+            transform.position = Mouse.current.position.value;
         }
 
         public void OnEndDrag(PointerEventData eventData)
@@ -76,12 +86,14 @@ namespace ui.inventory
 
             if (_parentChanged) return;
             
-            transform.SetParent(_currentParent);
+            SetParentPreserveScale(_currentParent);
             transform.localPosition = Vector3.zero;
         }
 
         public void OnPointerClick(PointerEventData eventData)
         {
+            OnItemSelected?.Invoke(this);
+            
             if (Draggable) return;
             
             OnClickItem?.Invoke(this);

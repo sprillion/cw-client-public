@@ -1,4 +1,5 @@
-﻿using infrastructure.services.saveLoad;
+﻿using infrastructure.services.bundles;
+using infrastructure.services.saveLoad;
 using network;
 using UnityEngine;
 using Zenject;
@@ -11,10 +12,18 @@ namespace infrastructure
         
         public override void InstallBindings()
         {
-            Application.targetFrameRate = -1;
-            
+            BindBundleService();
             BindSaveLoadService();
             BindNetworkManager();
+        }
+
+        private void BindBundleService()
+        {
+            Container
+                .Bind<IBundleService>()
+                .To<BundlesService>()
+                .AsSingle()
+                .NonLazy();
         }
                 
         private void BindSaveLoadService()

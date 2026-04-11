@@ -1,5 +1,4 @@
-﻿using UnityEditor.Animations;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace infrastructure.services.mobs
 {
@@ -8,7 +7,8 @@ namespace infrastructure.services.mobs
     {
         [field:SerializeField] public MobType MobType { get; private set; }
         [field:SerializeField] public MobModelType MobModelType { get; private set; }
-        [field:SerializeField] public AnimatorController AnimatorController { get; private set; }
+
+        [field:SerializeField] public RuntimeAnimatorController AnimatorController { get; private set; }
         [field:SerializeField] public Material Material { get; private set; }
         [field:SerializeField] public bool HaveSecondLayerSkin { get; private set; }
     }

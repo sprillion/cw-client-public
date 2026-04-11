@@ -50,6 +50,7 @@ public class ObjectPool
     {
         obj.gameObject.SetActive(false);
         obj.transform.SetParent(_parent);
+        obj.RestoreLocalScale();
         _pool.Enqueue(obj);
     }
 

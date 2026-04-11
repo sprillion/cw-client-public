@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using character;
 using factories.mobs;
 using network;
 using UnityEngine;
@@ -23,6 +24,8 @@ namespace infrastructure.services.mobs
         }
         
         private readonly Dictionary<ushort, Mob> _mobs = new Dictionary<ushort, Mob>();
+
+        public IReadOnlyDictionary<ushort, Mob> Mobs => _mobs;
 
         private readonly IMobFactory _mobFactory;
         
@@ -70,7 +73,7 @@ namespace infrastructure.services.mobs
             var mob = _mobFactory.GetNewMob(type);
             _mobs.TryAdd(id, mob);
             mob.Initialize(id, type);
-            mob.SetPosition(position, rotation, true);
+            mob.SetPosition(new EnemySnapshot(NetworkManager.CurrentTick, position, rotation));
             mob.SetBaseValues(maxHealth, currentHealth, level);
         }
 
@@ -84,6 +87,9 @@ namespace infrastructure.services.mobs
         
         private void SetPositions(Message message)
         {
+            var tick = message.GetInt();
+            NetworkManager.UpdateTick(tick);
+            
             var count = message.GetUShort();
             
             for (int i = 0; i < count; i++)
@@ -91,9 +97,9 @@ namespace infrastructure.services.mobs
                 var id = message.GetUShort();
                 var position = message.GetVector3();
                 var rotation = message.GetFloat();
-                
-                if (!_mobs.TryGetValue(id, out var mob)) return;
-                mob.SetPosition(position, rotation);
+
+                if (!_mobs.TryGetValue(id, out var mob)) continue;
+                mob.SetPosition(new EnemySnapshot(tick, position, rotation));
             }
         }
 

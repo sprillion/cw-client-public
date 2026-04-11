@@ -4,7 +4,6 @@ using infrastructure.services.chests;
 using infrastructure.services.inventory.items;
 using infrastructure.services.ui;
 using Sirenix.Utilities;
-using UnityEngine;
 using Zenject;
 
 namespace environment.chests

@@ -20,7 +20,14 @@ namespace ui.tools
         private void Awake()
         {
             _button = GetComponent<Button>();
-            _button.onClick.AddListener(() => _inputService.LockCursor());
+            if (!_inputService.IsMobile)
+            {
+                _button.onClick.AddListener(() => _inputService.LockCursor());
+            }
+            else
+            {
+                gameObject.SetActive(false);
+            }
         }
     }
 }

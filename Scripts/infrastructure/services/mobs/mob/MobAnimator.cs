@@ -14,7 +14,7 @@ namespace infrastructure.services.mobs
         public override void SetDirection(Vector3 direction = default)
         {
             direction.y = 0;
-            _animator.SetFloat(MoveSpeed, direction.sqrMagnitude);
+            _animator.SetFloat(MoveSpeed, direction.magnitude);
         }
 
         public override void Attack()

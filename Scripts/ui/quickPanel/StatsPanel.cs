@@ -2,6 +2,7 @@
 using TMPro;
 using ui.tools;
 using UnityEngine;
+using UnityEngine.UI;
 using Zenject;
 
 namespace ui.quickPanel
@@ -12,13 +13,27 @@ namespace ui.quickPanel
         [SerializeField] private ProgressBar _experienceBar;
         [SerializeField] private TMP_Text _levelText;
         [SerializeField] private TMP_Text _experienceText;
-
+        [SerializeField] private TMP_Text _damageText;
+        [SerializeField] private TMP_Text _armorText;
+        [SerializeField] private TMP_Text _attackSpeedText;
+        
+        [SerializeField] private RectTransform _statsTransform;
+        
         private ICharacterService _characterService;
 
         [Inject]
         public void Construct(ICharacterService characterService)
         {
             _characterService = characterService;
+            
+            _characterService.CurrentCharacter.CharacterStats.OnMaxHealthChanged += _ => SetMaxHealth();
+            _characterService.CurrentCharacter.CharacterStats.OnCurrentHealthChanged += _ => SetCurrentHealth();
+            _characterService.CurrentCharacter.CharacterStats.OnNeededExperienceChanged += _ => SetNeededExperience();
+            _characterService.CurrentCharacter.CharacterStats.OnExperienceChanged += _ => SetExperience();
+            _characterService.CurrentCharacter.CharacterStats.OnLevelChanged += _ => SetLevel();
+            _characterService.CurrentCharacter.CharacterStats.OnDamageChanged += _ => SetDamage();
+            _characterService.CurrentCharacter.CharacterStats.OnArmorChanged += _ => SetArmor();
+            _characterService.CurrentCharacter.CharacterStats.OnAttackSpeedChanged += _ => SetAttackSpeed();
         }
 
         public void Initialize()
@@ -28,12 +43,7 @@ namespace ui.quickPanel
             SetNeededExperience();
             SetExperience();
             SetLevel();
-
-            _characterService.CurrentCharacter.CharacterStats.OnMaxHealthChanged += _ => SetMaxHealth();
-            _characterService.CurrentCharacter.CharacterStats.OnCurrentHealthChanged += _ => SetCurrentHealth();
-            _characterService.CurrentCharacter.CharacterStats.OnNeededExperienceChanged += _ => SetNeededExperience();
-            _characterService.CurrentCharacter.CharacterStats.OnExperienceChanged += _ => SetExperience();
-            _characterService.CurrentCharacter.CharacterStats.OnLevelChanged += _ => SetLevel();
+            SetArmor();
         }
 
         private void SetMaxHealth()
@@ -62,6 +72,28 @@ namespace ui.quickPanel
         private void SetLevel()
         {
             _levelText.text = _characterService.CurrentCharacter.CharacterStats.Level.ToString();
+        }
+
+        private void SetArmor()
+        {
+            _armorText.text = $"{IconType.Armor.ToIcon()} {_characterService.CurrentCharacter.CharacterStats.Armor}%";
+            UpdateStatsLayout();
+        }
+        private void SetDamage()
+        {
+            _damageText.text = $"{IconType.Damage.ToIcon()} {_characterService.CurrentCharacter.CharacterStats.Damage}";
+            UpdateStatsLayout();
+        }
+        
+        private void SetAttackSpeed()
+        {
+            _attackSpeedText.text = $"{IconType.AttackSpeed.ToIcon()} {_characterService.CurrentCharacter.CharacterStats.AttackSpeed}";
+            UpdateStatsLayout();
+        }
+
+        private void UpdateStatsLayout()
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_statsTransform);
         }
     }
 }

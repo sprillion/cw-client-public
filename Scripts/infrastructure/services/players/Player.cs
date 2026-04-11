@@ -12,6 +12,7 @@ namespace infrastructure.services.users
 
         public Character Character { get; private set; }
         public EnemyCharacter EnemyCharacter { get; private set; }
+        public PlayerRole Role { get; private set; }
 
         public Player(int id, string nickname, EnemyCharacter enemyCharacter)
         {
@@ -19,12 +20,13 @@ namespace infrastructure.services.users
             Nickname = nickname;
             EnemyCharacter = enemyCharacter;
         }
-        
-        public Player(int id, string nickname, Vector3 startPosition)
+
+        public Player(int id, string nickname, Vector3 startPosition, PlayerRole role = PlayerRole.Player)
         {
             Id = id;
             Nickname = nickname;
             StartPosition = startPosition;
+            Role = role;
         }
 
         public void SetCharacter(Character character)

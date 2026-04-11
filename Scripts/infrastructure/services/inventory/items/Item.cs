@@ -1,15 +1,29 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using ui.inventory.equipSlot;
 using UnityEngine;
 
 namespace infrastructure.services.inventory.items
 {
     public class Item
     {
+        private static Dictionary<int, ItemData> _itemsData;
+        
         private int _count;
         private int _slot;
-        private int? _quickSlot = null;
-        
-        public int Id { get; set; }
+
+        private int _id;
+
+        public int Id
+        {
+            get => _id;
+            set
+            {
+                _id = value;
+                Data = _itemsData.GetValueOrDefault(value);
+            }
+        }
 
         public int Count
         {
@@ -35,34 +49,28 @@ namespace infrastructure.services.inventory.items
                 OnSlotChange?.Invoke(oldValue, _slot);
             }
         }
-
-        public int? QuickSlot
-        {
-            get => _quickSlot;
-            set
-            {
-                if (_quickSlot == value) return;
-                int oldValue = -1;
-                if (value == null)
-                {
-                    oldValue = (int)_quickSlot;
-                }
-                _quickSlot = value;
-                OnQuickSlotChange?.Invoke(_quickSlot ?? oldValue, _quickSlot == null ? -1 : Slot);
-            }
-        }
         
+        public bool IsUsableItem { get; set; }
+        public bool IsEquipeItem { get; set; }
+        // public bool ShowCount { get; set; }
+        
+        public EquipSlotType EquipSlotType { get; set; }
         public float Cooldown { get; set; }
         public float CurrentCooldown { get; private set; }
 
         public bool IsCooldown => CurrentCooldown > Time.time;
 
-        public ItemData Data { get; set; }
+        public ItemData Data { get; private set; }
 
         public event Action OnCountChange;
         public event Action<int, int> OnSlotChange;
-        public event Action<int, int> OnQuickSlotChange;
         public event Action<Item> OnUse;
+
+        public Item()
+        {
+            if (_itemsData != null) return;
+            _itemsData = Resources.LoadAll<ItemData>("Data/Inventory").ToDictionary(data => data.Id, data => data);
+        }
 
         public void Use()
         {

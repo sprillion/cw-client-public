@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using environment.chests;
 using factories.inventory;
+using infrastructure.factories;
 using infrastructure.factories.environment;
 using infrastructure.services.inventory.items;
 using network;
@@ -73,7 +74,7 @@ namespace infrastructure.services.chests
 
         public void OpenChest(ushort chestId)
         {
-            var message = new Message(ClientToServerId.Chest);
+            var message = new Message(MessageType.Chest);
             message.AddByte((byte)FromClientMessages.Open)
                 .AddUShort(chestId);
 
@@ -82,7 +83,7 @@ namespace infrastructure.services.chests
 
         public void GetAllItems(ushort chestId)
         {
-            var message = new Message(ClientToServerId.Chest);
+            var message = new Message(MessageType.Chest);
             message.AddByte((byte)FromClientMessages.GetAllItems)
                 .AddUShort(chestId);
 
@@ -91,7 +92,7 @@ namespace infrastructure.services.chests
 
         public void GetItem(ushort chestId, int itemId)
         {
-            var message = new Message(ClientToServerId.Chest);
+            var message = new Message(MessageType.Chest);
             message.AddByte((byte)FromClientMessages.GetItem)
                 .AddUShort(chestId)
                 .AddInt(itemId);
@@ -115,7 +116,7 @@ namespace infrastructure.services.chests
 
         private void CreateChestFromMob(Message message)
         {
-            var chest = _environmentFactory.CreateChestFromMob();
+            var chest = Pool.Get<ChestFromMob>();
             chest.Id = message.GetUShort();
             var position = message.GetVector3();
             chest.transform.position = position;
@@ -138,7 +139,7 @@ namespace infrastructure.services.chests
             if (chest == null) return;
 
             var itemsCount = message.GetInt();
-            var items = new List<Item>();
+            var items = new List<Item>(); ;
             for (int i = 0; i < itemsCount; i++)
             {
                 var item = CreateItem(message);
@@ -155,7 +156,6 @@ namespace infrastructure.services.chests
             {
                 Id = id,
                 Count = message.GetInt(),
-                Data = _inventoryFactory.GetItemData(id)
             };
             return item;
         }

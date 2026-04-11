@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using network;
-using UnityEngine;
+﻿using UnityEngine;
 using Zenject;
 
 namespace character
@@ -9,64 +7,30 @@ namespace character
     {
         [SerializeField] private CharacterAnimator _characterAnimator;
         [SerializeField] private CharacterSkin _characterSkin;
+        [SerializeField] private HandItemsController _handItemsController;
+        [SerializeField] private EnemyController _enemyController;
 
-        private INetworkManager _networkManager;
+        public CharacterSkin CharacterSkin => _characterSkin;
+        public HandItemsController HandItemsController => _handItemsController;
+        public EnemyController EnemyController => _enemyController;
 
-        private readonly Queue<EnemyPosition> _enemyPositions = new Queue<EnemyPosition>();
+        public void SetVisible(bool visible)
+        {
+            _characterSkin.gameObject.SetActive(visible);
+            _handItemsController.gameObject.SetActive(visible);
+        }
 
-        private EnemyPosition _currentEnemyPosition;
-        private EnemyPosition _lastEnemyPosition;
-        
-        private float _elapsedTime;
-        
+
         [Inject]
-        public void Construct(INetworkManager networkManager)
+        public void Construct()
         {
-            _networkManager = networkManager;
-            _networkManager.Update += GetNewPosition;
+            _handItemsController.Initialize();
         }
 
-        private void OnDestroy()
+        public override void Release()
         {
-            _networkManager.Update -= GetNewPosition;
-        }
-
-        private void Update()
-        {
-            transform.position = Vector3.Lerp(_lastEnemyPosition.Position, _currentEnemyPosition.Position, _elapsedTime / Time.fixedDeltaTime);
-            transform.eulerAngles = new Vector3(0, Mathf.LerpAngle(_lastEnemyPosition.Rotation, _currentEnemyPosition.Rotation, _elapsedTime / Time.fixedDeltaTime), 0);
-            
-            _elapsedTime += Time.deltaTime;
-        }
-
-        public void SetPosition(Vector3 position, float rotation)
-        {
-            _enemyPositions.Enqueue(new EnemyPosition(position, rotation));
-            if (_enemyPositions.Count > 4)
-            {
-                _enemyPositions.Dequeue();
-            }
-        }
-
-        private void GetNewPosition()
-        {
-            _lastEnemyPosition = _currentEnemyPosition;
-            if (!_enemyPositions.TryDequeue(out _currentEnemyPosition)) return;
-            _characterAnimator.SetDirection(_currentEnemyPosition.Position - _lastEnemyPosition.Position);
-            _elapsedTime = 0;
-        }
-
-    }
-
-    public struct EnemyPosition
-    {
-        public Vector3 Position;
-        public float Rotation;
-
-        public EnemyPosition(Vector3 position, float rotation)
-        {
-            Position = position;
-            Rotation = rotation;
+            _enemyController.Clear();
+            base.Release();
         }
     }
 }

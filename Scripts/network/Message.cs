@@ -17,8 +17,7 @@ namespace network
         
         private readonly ushort _actionId;
 
-        public ServerToClientId ServerToClientId => (ServerToClientId)_actionId;
-        public ClientToServerId ClientToServerId => (ClientToServerId)_actionId;
+        public MessageType MessageType => (MessageType)_actionId;
 
         public Message(Enum action)
         {
@@ -157,6 +156,12 @@ namespace network
         public float GetFloat() => _reader.ReadSingle().FromNetworkBytes();
         public double GetDouble() => _reader.ReadDouble().FromNetworkBytes();
 
+        public T GetByteEnum<T>() where T : Enum
+        {
+            var b = _reader.ReadByte();
+            return (T)(b as object);
+        }
+        
         public string GetString()
         {
             var length = GetShort();
@@ -165,7 +170,7 @@ namespace network
                 length = (short)GetInt();
             }
 
-            if (length <= 0)
+            if (length < 0)
                 throw new InvalidDataException($"Invalid string length: {length}");
 
             return Encoding.UTF8.GetString(_reader.ReadBytes(length));

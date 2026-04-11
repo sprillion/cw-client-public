@@ -1,6 +1,7 @@
 ﻿using infrastructure.services.npc;
 using infrastructure.services.ui;
 using ui.popup;
+using ui.quest;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -10,6 +11,7 @@ namespace ui.npc
     public class NpcPopup : Popup
     {
         [SerializeField] private ShopPopup _shopPopup;
+        [SerializeField] private QuestsPopup _questsPopup;
         
         [SerializeField] private NpcCard _npcCard;
         
@@ -68,7 +70,9 @@ namespace ui.npc
 
         private void GetQuestsInfo()
         {
-            
+            _questsPopup.SetNpc(_npcService.CurrentNpcData.NpcType);
+            _questsPopup.Show();
+            _uiService.QuestsInfoPopup.Show(this);
         }
 
     }

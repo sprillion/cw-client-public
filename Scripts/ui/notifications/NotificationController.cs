@@ -32,6 +32,9 @@ namespace ui.notifications
             _characterService.CurrentCharacter.CharacterStats.OnDiamondsChanged += OnDiamondsChanged;
             _characterService.CurrentCharacter.CharacterStats.OnPurchasedDiamondsChanged += OnDiamondsChanged;
             _characterService.CurrentCharacter.CharacterStats.OnExperienceChanged += OnExperienceAdded;
+            _characterService.CurrentCharacter.CharacterStats.OnArmorChanged += OnArmorChanged;
+            _characterService.CurrentCharacter.CharacterStats.OnDamageChanged += OnDamageChanged;
+            _characterService.CurrentCharacter.CharacterStats.OnAttackSpeedChanged += OnAttackSpeedChanged;
         }
 
         private void OnHealthChanged(int value)
@@ -53,8 +56,23 @@ namespace ui.notifications
         {
             AddNotification(NotificationType.Exp, true, value);
         }
+        
+        private void OnArmorChanged(int value)
+        {
+            AddNotification(NotificationType.Armor, value >= 0, value);
+        }
+        
+        private void OnDamageChanged(int value)
+        {
+            AddNotification(NotificationType.Damage, value >= 0, value);
+        }
+        
+        private void OnAttackSpeedChanged(float value)
+        {
+            AddNotification(NotificationType.AttackSpeed, value >= 0, value);
+        }
 
-        private void AddNotification(NotificationType notificationType, bool isPositive, int value)
+        private void AddNotification(NotificationType notificationType, bool isPositive, float value)
         {
             if (_loadingService.IsLoading) return;
             

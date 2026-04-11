@@ -1,6 +1,6 @@
 ﻿using System;
+using character;
 using Cysharp.Threading.Tasks;
-using I2.Loc;
 using ui.worldUi;
 using UnityEngine;
 
@@ -35,6 +35,7 @@ namespace infrastructure.services.mobs
         {
             _mobModel.Release();
             _mobModel = null;
+            _mobController.EnemyController.Clear();
             base.Release();
         }
 
@@ -45,9 +46,9 @@ namespace infrastructure.services.mobs
             _mobController.SetMobAnimator(_mobModel.MobAnimator);
         }
 
-        public void SetPosition(Vector3 position, float rotation, bool teleport = false)
+        public void SetPosition(EnemySnapshot snapshot)
         {
-            _mobController.SetPosition(position, rotation, teleport);
+            _mobController.EnemyController.ApplySnapshot(snapshot);
         }
 
         public void SetBaseValues(int maxHealth, int currentHealth, int level)
@@ -82,7 +83,7 @@ namespace infrastructure.services.mobs
         
         private void SetName()
         {
-            _infoPanel.SetNickname(LocalizationManager.GetTranslation($"Mobs/{(ushort)MobType}"));
+            _infoPanel.SetNickname($"Mobs/{(ushort)MobType}".Loc());
         }
     }
 }

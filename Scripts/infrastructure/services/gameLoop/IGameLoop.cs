@@ -4,6 +4,6 @@ namespace infrastructure.services.gameLoop
 {
     public interface IGameLoop
     {
-        void AddResponseAction(Action action);
+        void AddToUnityThread(Action action);
     }
 }

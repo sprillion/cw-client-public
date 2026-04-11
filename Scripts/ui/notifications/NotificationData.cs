@@ -13,7 +13,7 @@ namespace ui.notifications
 
         public Notify GetNotificationData(NotificationType type)
         {
-            return _notifies.First(n => n.NotificationType == type);
+            return _notifies.FirstOrDefault(n => n.NotificationType == type);
         }
     }
 
@@ -23,7 +23,10 @@ namespace ui.notifications
         Diamond,
         Health,
         Exp,
-        Level
+        Level,
+        Armor,
+        Damage,
+        AttackSpeed
     }
 
     [Serializable]

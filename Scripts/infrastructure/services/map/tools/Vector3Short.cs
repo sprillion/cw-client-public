@@ -1,4 +1,5 @@
 ﻿using System;
+using Unity.Burst.Intrinsics;
 using UnityEngine;
 
 [Serializable]
@@ -54,5 +55,10 @@ public struct Vector3Short
     public override string ToString()
     {
         return $"X: {X}, Y: {Y}, Z: {Z}";
+    }
+
+    public readonly Vector3 ToUnityVector()
+    {
+        return new Vector3(X, Y, Z);
     }
 }

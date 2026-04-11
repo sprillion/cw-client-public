@@ -31,6 +31,7 @@ namespace infrastructure.services.map.import
                     writer.Write(block.Position.Y);
                     writer.Write(block.Position.Z);
                     writer.Write(block.Value);
+                    writer.Write(block.Rotation);
                 }
             }
         }
@@ -38,40 +39,68 @@ namespace infrastructure.services.map.import
         // Десериализация
         public static List<ExportedChunk> Deserialize(byte[] data)
         {
-            using var memoryStream = new MemoryStream(data);
-            using var gzipStream = new GZipStream(memoryStream, CompressionMode.Decompress);
-            using var reader = new BinaryReader(gzipStream);
             var result = new List<ExportedChunk>();
+            foreach (var chunk in DeserializeLazy(data))
+                result.Add(chunk);
+            return result;
+        }
+
+        // Ленивая десериализация — читает по одному чанку за раз.
+        // Позволяет вставлять await UniTask.Yield() между чанками на WebGL.
+        // yield return нельзя использовать внутри try/catch, поэтому чтение
+        // одного чанка вынесено в отдельный метод ReadNextChunk.
+        public static IEnumerable<ExportedChunk> DeserializeLazy(byte[] data)
+        {
+            var memoryStream = new MemoryStream(data);
+            var gzipStream = new GZipStream(memoryStream, CompressionMode.Decompress);
+            var reader = new BinaryReader(gzipStream);
 
             try
             {
                 while (true)
                 {
-                    var chunk = new ExportedChunk()
-                    {
-                        Position = new Vector2Short(reader.ReadInt16(), reader.ReadInt16()),
-                        Blocks = new List<Block>()
-                    };
-
-                    var subCount = reader.ReadInt32();
-
-                    for (int i = 0; i < subCount; i++)
-                    {
-                        chunk.Blocks.Add(new Block()
-                        {
-                            BlockType = (BlockType)reader.ReadByte(),
-                            Position = new Vector3Short(reader.ReadInt16(), reader.ReadInt16(),
-                                reader.ReadInt16()),
-                            Value = reader.ReadInt32()
-                        });
-                    }
-
-                    result.Add(chunk);
+                    var chunk = ReadNextChunk(reader);
+                    if (chunk == null) yield break;
+                    yield return chunk;
                 }
+            }
+            finally
+            {
+                reader.Dispose();
+                gzipStream.Dispose();
+                memoryStream.Dispose();
+            }
+        }
+
+        private static ExportedChunk ReadNextChunk(BinaryReader reader)
+        {
+            try
+            {
+                var chunk = new ExportedChunk()
+                {
+                    Position = new Vector2Short(reader.ReadInt16(), reader.ReadInt16()),
+                    Blocks = new List<Block>()
+                };
+
+                var subCount = reader.ReadInt32();
+
+                for (int i = 0; i < subCount; i++)
+                {
+                    chunk.Blocks.Add(new Block()
+                    {
+                        BlockType = (BlockType)reader.ReadByte(),
+                        Position = new Vector3Short(reader.ReadInt16(), reader.ReadInt16(),
+                            reader.ReadInt16()),
+                        Value = reader.ReadInt32(),
+                        Rotation = (short)reader.ReadInt32()
+                    });
+                }
+
+                return chunk;
             }
             catch (EndOfStreamException)
             {
-                return result;
+                return null;
             }
         }
     }

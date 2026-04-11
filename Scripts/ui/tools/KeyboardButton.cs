@@ -1,7 +1,9 @@
-﻿using TMPro;
+﻿using infrastructure.services.input;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using Zenject;
 
 namespace ui.tools
 {
@@ -10,6 +12,10 @@ namespace ui.tools
         [SerializeField] private Key _keyCode = Key.None;
         [SerializeField] private Button _button;
         [SerializeField] private TMP_Text _text;
+
+        [SerializeField] private bool _workInPopup;
+        
+        private IInputService _inputService;
         
         private bool _keyPressed;
 
@@ -19,10 +25,18 @@ namespace ui.tools
             _text.text = GetKetString();
         }
 
+        [Inject]
+        public void Construct(IInputService inputService)
+        {
+            _inputService = inputService;
+        }
+
         private void Update()
         {
             if (Keyboard.current == null) return;
-        
+            
+            if (!_workInPopup && !_inputService.FullInputEnabled) return;
+            
             bool keyDown = Keyboard.current[_keyCode].wasPressedThisFrame;
         
             if (keyDown && !_keyPressed)

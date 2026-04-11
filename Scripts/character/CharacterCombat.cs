@@ -50,7 +50,7 @@ namespace character
         private void LaunchAttack()
         {
             if (_isAttack) return;
-            if (!_inputService.CursorIsLocked) return;
+            if (!_inputService.CursorIsLocked && !_inputService.IsMobile) return;
             if (_potionThrowController.gameObject.activeSelf && !_potionThrowController.CurrentItem.IsCooldown) return;
             _characterAnimator.Attack();
             Attack().Forget();
@@ -75,7 +75,7 @@ namespace character
         private void SendHitMessage()
         {
             if (_mobsCount == 0) return;
-            var message = new Message(ClientToServerId.Character);
+            var message = new Message(MessageType.Character);
             message.AddByte((byte)CharacterService.FromClientMessage.Hit);
             message.AddInt(_mobsCount);
             

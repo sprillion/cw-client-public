@@ -1,4 +1,5 @@
-﻿using DG.Tweening;
+﻿using System;
+using DG.Tweening;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -37,6 +38,11 @@ namespace ui
             _block1.anchoredPosition = _block1Pos;
             _block2.anchoredPosition = _block2Pos;
             _block3.anchoredPosition = _block3Pos;
+        }
+
+        private void OnDestroy()
+        {
+            _sequence?.Kill();
         }
 
         private void LaunchLoading()

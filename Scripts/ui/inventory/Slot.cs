@@ -1,4 +1,5 @@
-﻿using infrastructure.services.inventory;
+﻿using System;
+using infrastructure.services.inventory;
 using infrastructure.services.inventory.items;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -8,15 +9,16 @@ namespace ui.inventory
 {
     public class Slot : MonoBehaviour, IDropHandler
     {
+        [field: SerializeField] public int Id { get; private set; }
         [field: SerializeField] public bool CanDropHere { get; set; } = true;
         [field: SerializeField] public Transform ParentToItems { get; set; }
 
-        [SerializeField] private CooldownSlot _cooldownSlot;
-        public int Id { get; private set; }
-
-        public UiItem CurrentUiItem { get; set; }
-
+        [SerializeField] protected CooldownSlot _cooldownSlot;
+        
         private IInventoryService _inventoryService;
+        public UiItem CurrentUiItem { get; private set; }
+
+        public event Action OnItemChanged; 
 
         [Inject]
         public void Construct(IInventoryService inventoryService)
@@ -31,9 +33,15 @@ namespace ui.inventory
             GameObject dropped = eventData.pointerDrag;
             UiItem uiItem = dropped.GetComponent<UiItem>();
 
-            if (uiItem == null || !uiItem.Draggable || CurrentUiItem == uiItem) return;
+            if (uiItem == null || !uiItem.Draggable || CurrentUiItem == uiItem || !DropCondition(uiItem)) return;
             
             SetItem(uiItem);
+            OnItemChanged?.Invoke();
+        }
+
+        public virtual bool DropCondition(UiItem uiItem)
+        {
+            return true;
         }
 
         public void SetItem(UiItem uiItem)
@@ -42,14 +50,26 @@ namespace ui.inventory
             {
                 CurrentUiItem = uiItem;
                 CurrentUiItem.SetParent(ParentToItems);
+                CurrentUiItem.transform.localScale = Vector3.one;
                 CurrentUiItem.CurrentItem.Slot = Id;
                 CurrentUiItem.CurrentItem.OnUse += OnItemUsed;
                 CurrentUiItem.CurrentItem.OnCountChange += CheckCountItems;
                 CurrentUiItem.CurrentItem.OnSlotChange += OnSlotChanged;
+                CurrentUiItem.OnRemove += ResetCurrentItem;
             }
             else if (CurrentUiItem.CurrentItem.Id == uiItem.CurrentItem.Id)
             {
                 MergeItems(uiItem);
+            }
+        }
+
+        public void SetVisualItem(UiItem uiItem)
+        {
+            if (CurrentUiItem == null)
+            {
+                CurrentUiItem = uiItem;
+                CurrentUiItem.SetParent(ParentToItems);
+                CurrentUiItem.transform.localScale = Vector3.one;
             }
         }
 
@@ -62,6 +82,7 @@ namespace ui.inventory
         {
             CurrentUiItem?.Release();
             ResetCurrentItem();
+            OnItemChanged?.Invoke();
         }
 
         private void ResetCurrentItem()
@@ -71,6 +92,7 @@ namespace ui.inventory
                 CurrentUiItem.CurrentItem.OnUse -= OnItemUsed;
                 CurrentUiItem.CurrentItem.OnCountChange -= CheckCountItems;
                 CurrentUiItem.CurrentItem.OnSlotChange -= OnSlotChanged;
+                CurrentUiItem.OnRemove -= ResetCurrentItem;
             }
 
             CurrentUiItem = null;
@@ -110,6 +132,7 @@ namespace ui.inventory
         private void OnSlotChanged(int oldSlot, int newSlot)
         {
             ResetCurrentItem();
+            OnItemChanged?.Invoke();
         }
     }
 }

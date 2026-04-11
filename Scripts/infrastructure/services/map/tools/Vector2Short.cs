@@ -1,4 +1,5 @@
 ﻿using System;
+using UnityEngine;
 
 [Serializable]
 public struct Vector2Short
@@ -53,5 +54,10 @@ public struct Vector2Short
     public override string ToString()
     {
         return $"X: {X}, Y: {Y}";
+    }
+    
+    public readonly Vector2 ToUnityVector()
+    {
+        return new Vector2(X, Y);
     }
 }

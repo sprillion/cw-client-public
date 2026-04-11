@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
+using infrastructure.factories;
 using infrastructure.factories.environment;
+using infrastructure.services.bundles;
 using network;
 using Newtonsoft.Json;
-using secrets;
 using tools;
 using UnityEngine;
-using UnityEngine.Networking;
 
 namespace infrastructure.services.npc
 {
@@ -17,6 +17,7 @@ namespace infrastructure.services.npc
         public enum FromClientMessage : byte
         {
             Attitude,
+            BuyItem,
         }
 
         public enum FromServerMessage : byte
@@ -26,13 +27,16 @@ namespace infrastructure.services.npc
             Attitude,
         }
 
+        private Dictionary<NpcType, NpcData> _npcDatas;
         private readonly Dictionary<NpcType, Npc> _npcs = new Dictionary<NpcType, Npc>();
-        private readonly Dictionary<NpcType, NpcDataJson> _npcsData = new Dictionary<NpcType, NpcDataJson>();
+        private readonly Dictionary<NpcType, NpcDataJson> _npcsShopData = new Dictionary<NpcType, NpcDataJson>();
         
         private readonly IEnvironmentFactory _environmentFactory;
         private readonly INetworkManager _networkManager;
+        private readonly IBundleService _bundleService;
 
 
+        public IReadOnlyDictionary<NpcType, Npc> Npcs => _npcs;
         public NpcData CurrentNpcData { get; set; }
         public int CurrentAttitudeLevel { get; private set; }
         public int CurrentAttitudeProgress { get; private set; }
@@ -42,11 +46,11 @@ namespace infrastructure.services.npc
 
         public event Action OnAttitudeLoaded;
         
-
-        public NpcService(INetworkManager networkManager, IEnvironmentFactory environmentFactory)
+        public NpcService(INetworkManager networkManager, IBundleService bundleService)
         {
             _networkManager = networkManager;
-            _environmentFactory = environmentFactory;
+            _bundleService = bundleService;
+            // _npcDatas = Resources.LoadAll<NpcData>("Data/Npc").ToDictionary(d => d.NpcType, d => d);
         }
 
         public void ReceiveMessage(Message message)
@@ -74,16 +78,16 @@ namespace infrastructure.services.npc
 
         public void GetAttitudeNpcInfo()
         {
-            var message = new Message(ClientToServerId.Npc);
-            message.AddByte(FromClientMessage.Attitude.ToByte());
-            message.AddByte(CurrentNpcData.NpcType.ToByte());
+            var message = new Message(MessageType.Npc)
+                .AddByte(FromClientMessage.Attitude.ToByte())
+                .AddByte(CurrentNpcData.NpcType.ToByte());
 
             _networkManager.SendMessage(message);
         }
 
         public List<ItemToPurchasing> GetShopItems()
         {
-            return _npcsData[CurrentNpcData.NpcType].ItemsToPurchasing;
+            return _npcsShopData[CurrentNpcData.NpcType].ItemsToPurchasing;
         }
         
         public void GetBarterInfo(NpcType npcType)
@@ -96,49 +100,62 @@ namespace infrastructure.services.npc
             
         }
 
+        public Sprite GetNpcAvatarIcon(NpcType npcType)
+        {
+            return _npcDatas.TryGetValue(npcType, out var data) ? data.AvatarIcon : null;
+        }
+
+        public void BuyItem(int itemId)
+        {
+            var message = new Message(MessageType.Npc)
+                .AddByte(FromClientMessage.BuyItem.ToByte())
+                .AddByte(CurrentNpcData.NpcType.ToByte())
+                .AddInt(itemId);
+            
+            _networkManager.SendMessage(message);
+        }
+
         private async UniTaskVoid LoadAllNpcTask()
         {
-            foreach (NpcType value in Enum.GetValues(typeof(NpcType)))
-            {
-                if (value != NpcType.Alchemist) continue;
-                await LoadNpcData(value);
-            }
-            
+            Debug.Log("[NpcService] Loading NPC data...");
+            await LoadNpcData();
+            Debug.Log("[NpcService] Loading NPC shop data...");
+            await LoadNpcShopData();
+            Debug.Log("[NpcService] All NPC data loaded.");
             OnNpcLoaded?.Invoke();
         }
 
-        private async UniTask LoadNpcData(NpcType npcType)
+        private async UniTask LoadNpcShopData()
         {
-            using (UnityWebRequest webRequest = UnityWebRequest.Get($"{SecretKey.NpcDataUrl}/{npcType}.json"))
+            var data = await _bundleService.LoadAssetsByLabel<TextAsset>("Npc");
+            Debug.Log($"[NpcService] NpcShopData assets loaded: {data.Count}");
+            foreach (var textAsset in data)
             {
-#if UNITY_WEBGL
-                webRequest.SetRequestHeader("Cache-Control", "max-age=3600, must-revalidate");
-#endif
-                await webRequest.SendWebRequest();
-
-                if (webRequest.result != UnityWebRequest.Result.Success)
-                {
-                    Debug.LogError("Error downloading JSON: " + webRequest.error);
-                }
-                else
-                {
-                    var npcDataJson = JsonConvert.DeserializeObject<NpcDataJson>(webRequest.downloadHandler.text);
-                    _npcsData.Add(npcDataJson.NpcType, npcDataJson);
-                }
+                var npcDataJson = JsonConvert.DeserializeObject<NpcDataJson>(textAsset.text);
+                _npcsShopData.Add(npcDataJson.NpcType, npcDataJson);
             }
+        }
+
+        private async UniTask LoadNpcData()
+        {
+            var data = await _bundleService.LoadAssetsByLabel<NpcData>("Npc");
+            Debug.Log($"[NpcService] NpcData assets loaded: {data.Count}");
+            if (data.Count > 0)
+                _npcDatas = data.ToDictionary(d => d.NpcType, d => d);
         }
 
         private void CreateNpc(Message message)
         {
-            var type = (NpcType)message.GetByte();
+            var npcType = (NpcType)message.GetByte();
             var position = message.GetVector3();
             var rotation = message.GetFloat();
 
-            var npc = _environmentFactory.CreateNpc(type);
+            var npc = Pool.Get<Npc>();
+            npc.SetData(_npcDatas[npcType]);
             npc.transform.position = position;
             npc.transform.rotation = Quaternion.Euler(new Vector3(0, rotation, 0));
 
-            if (!_npcs.TryAdd(type, npc))
+            if (!_npcs.TryAdd(npcType, npc))
             {
                 npc.Release();
             }

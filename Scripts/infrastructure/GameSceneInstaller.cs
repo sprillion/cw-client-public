@@ -1,18 +1,36 @@
 ﻿using factories.characters;
 using factories.inventory;
 using factories.mobs;
+using infrastructure.factories;
 using infrastructure.factories.environment;
 using infrastructure.services.auth;
+using infrastructure.services.platform;
+using infrastructure.services.chat;
 using infrastructure.services.chests;
+using infrastructure.services.clan;
+using infrastructure.services.craft;
 using infrastructure.services.gameLoop;
 using infrastructure.services.input;
 using infrastructure.services.inventory;
 using infrastructure.services.loading;
 using infrastructure.services.map;
-using infrastructure.services.map.chunk;
+using infrastructure.services.map.jobs;
+using infrastructure.services.mapMarkers;
+using infrastructure.services.navigation;
+using infrastructure.services.waypoint;
+using infrastructure.services.lumber;
+using infrastructure.services.mine;
 using infrastructure.services.mobs;
 using infrastructure.services.npc;
 using infrastructure.services.players;
+using infrastructure.services.quests;
+using infrastructure.services.house;
+using infrastructure.services.interior;
+using infrastructure.services.shop;
+using infrastructure.services.settings;
+using infrastructure.services.proximity;
+using infrastructure.services.transport;
+using infrastructure.services.sounds;
 using infrastructure.services.ui;
 using infrastructure.services.ui.popup;
 using infrastructure.services.users;
@@ -27,15 +45,22 @@ namespace infrastructure
         [SerializeField] private MapService _mapService;
         [SerializeField] private LoadingService _loadingService;
         [SerializeField] private UiService _uiService;
+        [SerializeField] private SoundService _soundService;
         
         public override void InstallBindings()
         {
+            Pool.Initialize(Container);
+            
             BindGameLoop();
             
+            BindChatService();
+            BindClanService();
+
             BindPlayerInputController();
             BindInputService();
 
             BindEnvironmentFactory();
+            BindQuestsService();
             BindNpcService();
             
             BindCharacterFactory();
@@ -45,18 +70,37 @@ namespace infrastructure
             BindMobFactory();
             BindMobService();
 
+            BindTransportService();
+            BindNavigationService();
+
             BindInventoryFactory();
             BindInventoryService();
             
+            BindCraftService();
+            BindMineService();
+            BindLumberService();
+
+            BindShopService();
+            BindHouseService();
+            BindInteriorService();
+
             BindChestsService();
             
             BindAuthorization();
-            
-            BindChunkFactory();
+            BindPlatformAuthFlow();
+
+            BindSettingsService();
+            BindSoundService();
+
             BindBlockTextureData();
+            BindMeshBakery();
             //BindTerrainGenerator();
             BindMapService();
-            
+            BindProximityService();
+            BindMapMarkerService();
+            BindWaypointService();
+            BindQuestMarkerService();
+
             BindUiService();
             BindPopupService();
             
@@ -77,6 +121,14 @@ namespace infrastructure
             Container
                 .Bind<IAuthorization>()
                 .To<Authorization>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindPlatformAuthFlow()
+        {
+            Container
+                .Bind<PlatformAuthFlow>()
                 .AsSingle()
                 .NonLazy();
         }
@@ -145,6 +197,15 @@ namespace infrastructure
                 .NonLazy();
         }
 
+        private void BindMeshBakery()
+        {
+            Container
+                .Bind<MeshBakery>()
+                .FromNewComponentOnNewGameObject()
+                .AsSingle()
+                .NonLazy();
+        }
+
         private void BindMapService()
         {
             Container
@@ -161,14 +222,6 @@ namespace infrastructure
                 .Bind<BlockTextureData>()
                 .To<BlockTextureData>()
                 .FromScriptableObjectResource("Data/Map/BlockTextureData")
-                .AsSingle()
-                .NonLazy();
-        }
-        private void BindChunkFactory()
-        {
-            Container
-                .Bind<IChunkFactory>()
-                .To<ChunkFactory>()
                 .AsSingle()
                 .NonLazy();
         }
@@ -243,6 +296,160 @@ namespace infrastructure
             Container
                 .Bind<INpcService>()
                 .To<NpcService>()
+                .AsSingle()
+                .NonLazy();
+        }
+        
+        private void BindQuestsService()
+        {
+            Container
+                .Bind<IQuestsService>()
+                .To<QuestsService>()
+                .AsSingle()
+                .NonLazy();
+        }
+        
+        private void BindChatService()
+        {
+            Container
+                .Bind<IChatService>()
+                .To<ChatService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindClanService()
+        {
+            Container
+                .Bind<IClanService>()
+                .To<ClanService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindCraftService()
+        {
+            Container
+                .Bind<ICraftService>()
+                .To<CraftService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindShopService()
+        {
+            Container
+                .Bind<IShopService>()
+                .To<ShopService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindHouseService()
+        {
+            Container
+                .Bind<IHouseService>()
+                .To<HouseService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindInteriorService()
+        {
+            Container
+                .Bind<IInteriorService>()
+                .To<InteriorService>()
+                .AsSingle()
+                .NonLazy();
+        }
+        
+        private void BindMineService()
+        {
+            Container
+                .Bind<IMineService>()
+                .To<MineService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindLumberService()
+        {
+            Container
+                .Bind<ILumberService>()
+                .To<LumberService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindTransportService()
+        {
+            Container
+                .Bind<ITransportService>()
+                .To<TransportService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindSettingsService()
+        {
+            Container
+                .Bind<ISettingsService>()
+                .To<SettingsService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindSoundService()
+        {
+            Container
+                .Bind<ISoundService>()
+                .To<SoundService>()
+                .FromComponentInNewPrefab(_soundService)
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindProximityService()
+        {
+            Container
+                .Bind<IProximityService>()
+                .To<ProximityService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindMapMarkerService()
+        {
+            Container
+                .Bind<IMapMarkerService>()
+                .To<MapMarkerService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindWaypointService()
+        {
+            Container
+                .Bind<IWaypointService>()
+                .To<WaypointService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindQuestMarkerService()
+        {
+            Container
+                .Bind<IQuestMarkerService>()
+                .To<QuestMarkerService>()
+                .AsSingle()
+                .NonLazy();
+        }
+
+        private void BindNavigationService()
+        {
+            Container
+                .Bind<INavigationService>()
+                .To<NavigationService>()
                 .AsSingle()
                 .NonLazy();
         }

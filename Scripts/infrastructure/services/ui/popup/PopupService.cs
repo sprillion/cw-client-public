@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using infrastructure.services.input;
 using ui.popup;
 
@@ -7,7 +6,7 @@ namespace infrastructure.services.ui.popup
 {
     public class PopupService : IPopupService
     {
-        private readonly List<Popup> _openedPopups = new List<Popup>();
+        private readonly HashSet<Popup> _openedPopups = new HashSet<Popup>();
 
         private readonly IInputService _inputService;
         
@@ -23,6 +22,7 @@ namespace infrastructure.services.ui.popup
             _openedPopups.Add(popup);
             
             _inputService.UnlockCursor(true);
+            _inputService.DisableFullInput();
         }
 
         public void RemovePopup(Popup popup)
@@ -32,12 +32,14 @@ namespace infrastructure.services.ui.popup
             if (_openedPopups.Count == 0)
             {
                 _inputService.LockCursor(true);
+                _inputService.EnableFullInput();
             }
         }
 
         private void Back()
         {
-            _openedPopups.LastOrDefault()?.Back();
+            //TODO: использовать ESC для возвращения в попапах
+            //_openedPopups.LastOrDefault()?.Back();
         }
     }
 }

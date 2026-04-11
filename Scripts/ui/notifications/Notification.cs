@@ -14,11 +14,11 @@ namespace ui.notifications
         public RectTransform Rect => (RectTransform)transform;
         public CanvasGroup CanvasGroup => _canvasGroup;
         
-        public void SetValue(Notify notify, bool isPositive, int value)
+        public void SetValue(Notify notify, bool isPositive, float value)
         {
             _stringBuilder.Clear();
             _stringBuilder.Append(isPositive ? "+" : "");
-            _stringBuilder.Append(value);
+            _stringBuilder.Append($"{value:0.##}");
             _stringBuilder.Append(notify.IconType.ToIcon());
             _text.text = _stringBuilder.ToString();
             _text.color = isPositive ? notify.PositiveColor : notify.NegativeColor;

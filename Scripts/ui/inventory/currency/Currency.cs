@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using infrastructure.services.players;
+﻿using infrastructure.services.players;
 using TMPro;
 using UnityEngine;
 using Zenject;
@@ -25,17 +24,13 @@ namespace ui.inventory.currency
         
         private void OnGoldChanged(int value)
         {
-            _goldText.text =
-                _characterService.CurrentCharacter.CharacterStats.Gold.ToString("N0",
-                    CultureInfo.GetCultureInfo("de-DE"));
+            _goldText.text = _characterService.CurrentCharacter.CharacterStats.Gold.WithDots();
         }
 
         private void OnDiamondsChanged(int value)
         {
-            _diamondsText.text =
-                (_characterService.CurrentCharacter.CharacterStats.Diamonds +
-                 _characterService.CurrentCharacter.CharacterStats.PurchasedDiamonds)
-                .ToString("N0", CultureInfo.GetCultureInfo("de-DE"));
+            _diamondsText.text = (_characterService.CurrentCharacter.CharacterStats.Diamonds +
+                                  _characterService.CurrentCharacter.CharacterStats.PurchasedDiamonds).WithDots();
         }
     }
 }

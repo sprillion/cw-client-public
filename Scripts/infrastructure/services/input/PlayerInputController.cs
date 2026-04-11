@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -7,15 +8,18 @@ namespace infrastructure.services.input
     public class PlayerInputController : MonoBehaviour, IPlayerInputController
     {
         [SerializeField] private PlayerInput _playerInput;
-
+        
         public event Action<Vector2> OnMove;
         public event Action<Vector2> OnLook;
         public event Action OnAttack;
+        public event Action OnStopAttack;
         public event Action OnInteract;
         public event Action OnJump;
+        public event Action OnStopJump;
         public event Action<float> OnZoom;
         public event Action OnChangeCursor;
         public event Action OnBack;
+        
 
         public void Move(InputAction.CallbackContext context)
         {
@@ -33,11 +37,18 @@ namespace infrastructure.services.input
             {
                 OnAttack?.Invoke();
             }
+            else if (context.canceled)
+            {
+                OnStopAttack?.Invoke();
+            }
         }
         
         public void Interact(InputAction.CallbackContext context)
         {
-            OnInteract?.Invoke();
+            if (context.started)
+            {
+                OnInteract?.Invoke();
+            }
         }
         
         public void Jump(InputAction.CallbackContext context)
@@ -45,6 +56,10 @@ namespace infrastructure.services.input
             if (context.started)
             {
                 OnJump?.Invoke();
+            }
+            else if (context.canceled)
+            {
+                OnStopJump?.Invoke();
             }
         }
 

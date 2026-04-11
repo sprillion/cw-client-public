@@ -3,12 +3,15 @@
     public enum ItemType : byte
     {
         None,
-        Weapon,
+        Sword,
         Armor,
         Food,
         Potion,
         Resource,
         BuildingBlock,
-        Quest
+        Quest,
+        Pickaxe,
+        Action,
+        Axe,
     }
 }

@@ -1,6 +1,7 @@
 ﻿using character.handItems;
 using DG.Tweening;
 using factories.characters;
+using infrastructure.factories;
 using infrastructure.services.input;
 using infrastructure.services.inventory;
 using infrastructure.services.inventory.items;
@@ -99,8 +100,9 @@ namespace character
         {
             if (_currentPotion != null) return;
 
-            _currentPotion = _characterFactory.GetPotion(CurrentItem);
-            _currentPotion.transform.SetParent(_potionParent);
+            _currentPotion = Pool.Get<Potion>();
+            _currentPotion.CurrentItem = CurrentItem;
+            _currentPotion.SetParentPreserveScale(_potionParent);
             _currentPotion.transform.localPosition = Vector3.zero;
             _currentPotion.transform.localRotation = Quaternion.identity;
         }
@@ -162,8 +164,8 @@ namespace character
             _isThrowing = true;
             landingMarker.SetActive(false);
             trajectoryLine.gameObject.SetActive(false);
-
-            _currentPotion.transform.transform.SetParent(null);
+            
+            _currentPotion.transform.SetParent(null);
             _currentPotion.CurrentItem.Use();
 
             _currentPotion.transform.position = throwOrigin.position;
@@ -200,7 +202,7 @@ namespace character
         
         private void SendThrowing(bool isThrowing)
         {
-            var message = new Message(ClientToServerId.Character);
+            var message = new Message(MessageType.Character);
             message.AddByte(CharacterService.FromClientMessage.Throwing.ToByte())
                 .AddBool(isThrowing);
             
@@ -209,16 +211,14 @@ namespace character
 
         private void SendThrowPotion(float duration)
         {
-            var message = new Message(ClientToServerId.Inventory);
+            var message = new Message(MessageType.Inventory);
             message.AddByte(InventoryService.FromClientMessages.UseItem.ToByte());
-            if (CurrentItem.QuickSlot == null) return;
             message.AddInt(CurrentItem.Id)
                 .AddInt(CurrentItem.Slot)
-                .AddInt((int)CurrentItem.QuickSlot)
                 .AddVector3(throwOrigin.position)
                 .AddVector3(_targetPosition)
                 .AddFloat(duration);
-            
+
             _networkManager.SendMessage(message);
         }
 

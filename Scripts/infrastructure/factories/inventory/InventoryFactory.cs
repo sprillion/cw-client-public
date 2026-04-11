@@ -2,7 +2,6 @@
 using System.Linq;
 using infrastructure.services.inventory.items;
 using ui.inventory;
-using ui.npc;
 using UnityEngine;
 using UnityEngine.UI;
 using Zenject;
@@ -11,7 +10,7 @@ namespace factories.inventory
 {
     public class InventoryFactory : IInventoryFactory
     {
-        private const string ItemsDataPath = "Data/Inventory/Items/";
+        private const string ItemsDataPath = "Data/Inventory/";
 
         private const string SlotPath = "Prefabs/Ui/Inventory/Slot";
         private const string AddSlotPath = "Prefabs/Ui/Inventory/AddSlot";
@@ -25,10 +24,6 @@ namespace factories.inventory
         private readonly Button _addSlotPrefab;
         private readonly GameObject _lockedSlotPrefab;
 
-
-        private readonly ObjectPool _itemsPool;
-        private readonly ObjectPool _itemsToPurchasingViewPool;
-
         private readonly Dictionary<int, ItemData> _itemsData;
 
         public InventoryFactory(DiContainer container)
@@ -39,12 +34,6 @@ namespace factories.inventory
             _addSlotPrefab = Resources.Load<Button>(AddSlotPath);
             _lockedSlotPrefab = Resources.Load<GameObject>(LockedSlotPath);
             _itemsData = Resources.LoadAll<ItemData>(ItemsDataPath).ToDictionary(data => data.Id, data => data);
-
-            var itemPrefab = Resources.Load<UiItem>(ItemPath);
-            _itemsPool = new ObjectPool(itemPrefab, 0);
-
-            _itemsToPurchasingViewPool =
-                new ObjectPool(Resources.Load<ItemToPurchasingView>("Prefabs/Ui/Npc/ItemToPurchase"), 0, null, container);
         }
 
         public Slot GetSlot()
@@ -65,16 +54,6 @@ namespace factories.inventory
         public ItemData GetItemData(int id)
         {
             return _itemsData.GetValueOrDefault(id);
-        }
-
-        public UiItem GetItem()
-        {
-            return _itemsPool.GetObject<UiItem>();
-        }
-
-        public ItemToPurchasingView GetItemToPurchasing()
-        {
-            return _itemsToPurchasingViewPool.GetObject<ItemToPurchasingView>();
         }
     }
 }

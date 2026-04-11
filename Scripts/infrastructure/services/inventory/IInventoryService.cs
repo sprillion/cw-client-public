@@ -15,7 +15,15 @@ namespace infrastructure.services.inventory
         
         event Action OnInventoryLoaded;
         event Action<Item> OnSlotUpdated;
+        event Action OnSlotBuyed;
+        event Action<PurchasingSlot> OnPurchsingSlotInfo;
 
         void UpdateItemSlot(int oldSlot, int newSlot);
+        void RemoveItem(int slot);
+        bool HaveItems(int itemId, int count);
+        int CountItems(int itemId);
+        void UseItem(Item item);
+        void GetPurchasingInfo();
+        void BuyNewSlot();
     }
 }

@@ -9,5 +9,8 @@
         Health,
         Level,
         Experience,
+        Armor,
+        Damage,
+        AttackSpeed,
     }
 }

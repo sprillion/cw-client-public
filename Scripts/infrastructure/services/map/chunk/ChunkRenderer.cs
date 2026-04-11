@@ -1,6 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using infrastructure.factories;
+using infrastructure.services.map;
 using infrastructure.services.map.chunk;
+using infrastructure.services.map.jobs;
+using Sirenix.Utilities;
+using Unity.Collections;
+using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 using Zenject;
 
@@ -12,50 +20,67 @@ public class ChunkRenderer : PooledObject
     public const int ChunkHeight = 128;
 
     [SerializeField] private MeshFilter _meshFilter;
+    [SerializeField] private MeshRenderer _meshRenderer;
     [SerializeField] private MeshCollider _meshCollider;
 
-    private readonly List<Vector3> _vertices = new List<Vector3>();
-    private readonly List<Vector3> _waterVertices = new List<Vector3>();
-    private readonly List<Vector2> _uvs = new List<Vector2>();
-    private readonly List<Vector2> _waterUvs = new List<Vector2>();
-
-    private BlockTextureData _blockTextureData;
-    private IChunkFactory _chunkFactory;
+    private MeshBakery _meshBakery;
+    private Material _waterMaterial;
 
     private WaterRenderer _waterRenderer;
 
-    private static int[] _triangles;
     private static int[] _waterTriangles;
     private static bool _trianglesInited;
-    
+
+    public static Dictionary<BlockType, BlockData> BlockDatas;
+
+    // --- Job state (allocated in ScheduleMeshJob, disposed in ApplyMeshResults) ---
+    private JobHandle _pendingJobHandle;
+    private NativeArray<RenderedBlockBlittable> _jobBlocks;
+    private NativeList<float3> _jobTerrainVerts;
+    private NativeList<float2> _jobTerrainUvs;
+    private NativeList<int>    _jobTerrainTris;
+    private NativeList<float3> _jobWaterVerts;
+    private NativeList<float2> _jobWaterUvs;
+    private NativeList<float3> _jobLeavesVerts;
+    private NativeList<float2> _jobLeavesUvs;
+    private NativeReference<int> _jobMaxY;
+    private bool _jobAllocated;
+
     public ChunkData ChunkData { get; private set; }
     public Mesh ChunkMesh { get; private set; }
     public Mesh WaterMesh { get; private set; }
 
     [Inject]
-    public void Construct(BlockTextureData blockTextureData, IChunkFactory chunkFactory)
+    public void Construct(BlockTextureData blockTextureData, MeshBakery meshBakery)
     {
-        _blockTextureData = blockTextureData;
-        _chunkFactory = chunkFactory;
+        _meshBakery = meshBakery;
+        BlockDatas ??= blockTextureData.BlockDatas.ToDictionary(b => b.BlockType, b => b);
         InitTriangles();
     }
-    
-    public void SetData(ChunkData chunkData)
+
+    public void SetData(ChunkData chunkData, Material worldMaterial, Material waterMaterial)
     {
         ChunkData = chunkData;
+        _waterMaterial = waterMaterial;
+
+        if (_meshRenderer.materials.IsNullOrEmpty())
+        {
+            _meshRenderer.SetMaterials(new List<Material> { worldMaterial });
+        }
     }
 
     public void Generate()
     {
         ChunkMesh = new Mesh();
-        
-        RegenerateMesh();
-
         _meshFilter.sharedMesh = ChunkMesh;
-        if (_waterRenderer != null)
-        {
-            _waterRenderer.WaterMeshFilter.sharedMesh = WaterMesh;
-        }
+        ScheduleMeshJob().Complete();
+        ApplyMeshResults();
+    }
+
+    public void RegenerateMesh()
+    {
+        ScheduleMeshJob().Complete();
+        ApplyMeshResults();
     }
 
     public override void Release()
@@ -67,221 +92,144 @@ public class ChunkRenderer : PooledObject
         base.Release();
     }
 
-    public void RegenerateMesh()
+    public JobHandle ScheduleMeshJob()
     {
-        _vertices.Clear();
-        _waterVertices.Clear();
-        _uvs.Clear();
-        _waterUvs.Clear();
-        
-        foreach (var renderedBlock in ChunkData.Blocks)
+        if (ChunkMesh == null)
         {
-            GenerateBlock(renderedBlock);
+            ChunkMesh = new Mesh();
+            _meshFilter.sharedMesh = ChunkMesh;
         }
-        
+
+        int blockCount = ChunkData.Blocks.Count;
+        _jobBlocks = new NativeArray<RenderedBlockBlittable>(blockCount, Allocator.TempJob);
+        for (int i = 0; i < blockCount; i++)
+        {
+            var rb = ChunkData.Blocks[i];
+            _jobBlocks[i] = new RenderedBlockBlittable
+            {
+                Position  = rb.Position,
+                BlockType = (byte)rb.BlockType,
+                Faces     = (byte)rb.Faces,
+                Rotate    = rb.Rotate,
+            };
+        }
+
+        _jobTerrainVerts = new NativeList<float3>(8192, Allocator.TempJob);
+        _jobTerrainUvs   = new NativeList<float2>(8192, Allocator.TempJob);
+        _jobTerrainTris  = new NativeList<int>(16384, Allocator.TempJob);
+        _jobWaterVerts   = new NativeList<float3>(2048, Allocator.TempJob);
+        _jobWaterUvs     = new NativeList<float2>(2048, Allocator.TempJob);
+        _jobLeavesVerts  = new NativeList<float3>(4, Allocator.TempJob);
+        _jobLeavesUvs    = new NativeList<float2>(4, Allocator.TempJob);
+        _jobMaxY         = new NativeReference<int>(0, Allocator.TempJob);
+        _jobAllocated    = true;
+
+        var job = new ChunkMeshJob
+        {
+            Blocks          = _jobBlocks,
+            BakedBlocks     = _meshBakery.BlockData,
+            BakedFaces      = _meshBakery.FaceData,
+            VertPositions   = _meshBakery.VertPositions,
+            TriangleIndices = _meshBakery.TriangleIndices,
+            GenerateLeaves  = false,
+            TerrainVerts    = _jobTerrainVerts,
+            TerrainUvs      = _jobTerrainUvs,
+            TerrainTris     = _jobTerrainTris,
+            WaterVerts      = _jobWaterVerts,
+            WaterUvs        = _jobWaterUvs,
+            LeavesVerts     = _jobLeavesVerts,
+            LeavesUvs       = _jobLeavesUvs,
+            MaxY            = _jobMaxY,
+        };
+
+        _pendingJobHandle = job.Schedule();
+        return _pendingJobHandle;
+    }
+
+    public void ApplyMeshResults()
+    {
+        if (!_jobAllocated) return;
+        _pendingJobHandle.Complete();
+        _jobAllocated = false;
+
+        // --- Terrain mesh ---
         ChunkMesh.triangles = Array.Empty<int>();
-        ChunkMesh.vertices = _vertices.ToArray();
-        ChunkMesh.uv = _uvs.ToArray();
+        ChunkMesh.SetVertices(_jobTerrainVerts.AsArray().Reinterpret<Vector3>());
+        ChunkMesh.SetUVs(0, _jobTerrainUvs.AsArray().Reinterpret<Vector2>());
         ChunkMesh.subMeshCount = 1;
-        ChunkMesh.SetTriangles(_triangles, 0, _vertices.Count  * 6 / 4, 0);
+        ChunkMesh.SetIndices(_jobTerrainTris.AsArray(), MeshTopology.Triangles, 0, false);
         ChunkMesh.Optimize();
         ChunkMesh.RecalculateNormals();
-        ChunkMesh.RecalculateBounds();
-        
-        _meshCollider.sharedMesh = ChunkMesh;
-        
-        SetWaterMesh();
-    }
 
-    private void SetWaterMesh()
-    {
-        if (WaterMesh == null) return;
-        
-        WaterMesh.triangles = Array.Empty<int>();
-        WaterMesh.vertices = _waterVertices.ToArray();
-        WaterMesh.uv = _waterUvs.ToArray();
-        WaterMesh.subMeshCount = 1;
-        WaterMesh.SetTriangles(_waterTriangles, 0, _waterVertices.Count * 6 / 4, 0);
-        WaterMesh.Optimize();
-        
-        WaterMesh.RecalculateNormals();
-        WaterMesh.RecalculateBounds();
-        _waterRenderer.WaterMeshCollider.sharedMesh = WaterMesh;
-    }
-    
-    private void GenerateBlock(RenderedBlock renderedBlock)
-    {
-        if (renderedBlock.BlockType == BlockType.Water)
+        int maxY = _jobMaxY.Value;
+        var boundsSize = new Vector3(ChunkWidth, maxY > 0 ? maxY : ChunkHeight, ChunkWidth);
+        ChunkMesh.bounds = new Bounds(boundsSize / 2f, boundsSize);
+        _meshCollider.sharedMesh = ChunkMesh;
+
+        // --- Water mesh ---
+        int waterVertCount = _jobWaterVerts.Length;
+        if (waterVertCount > 0)
         {
             CreateWater();
-            GenerateWaterTopSide(renderedBlock);
-            return;
-        }
-        
-        GenerateRightSide(renderedBlock);
-        GenerateLeftSide(renderedBlock);
-        GenerateFrontSide(renderedBlock);
-        GenerateBackSide(renderedBlock);
-        GenerateTopSide(renderedBlock);
-        GenerateBottomSide(renderedBlock);
-    }
-    
-    private void GenerateRightSide(RenderedBlock renderedBlock)
-    {
-        if (!renderedBlock.Right) return;
-        
-        _vertices.Add(new Vector3(1, 0, 0) + renderedBlock.Position);
-        _vertices.Add(new Vector3(1, 1, 0) + renderedBlock.Position);
-        _vertices.Add(new Vector3(1, 0, 1) + renderedBlock.Position);
-        _vertices.Add(new Vector3(1, 1, 1) + renderedBlock.Position);
-        
-        AddUvs(renderedBlock.BlockType, BlockSide.Right, renderedBlock.Rotate);
-    }
-
-    private void GenerateLeftSide(RenderedBlock renderedBlock)
-    {
-        if (!renderedBlock.Left) return;
-
-        _vertices.Add(new Vector3(0, 0, 0) + renderedBlock.Position);
-        _vertices.Add(new Vector3(0, 0, 1) + renderedBlock.Position);
-        _vertices.Add(new Vector3(0, 1, 0) + renderedBlock.Position);
-        _vertices.Add(new Vector3(0, 1, 1) + renderedBlock.Position);
-        
-        AddUvs(renderedBlock.BlockType, BlockSide.Left, renderedBlock.Rotate);
-    }
-    
-    private void GenerateFrontSide(RenderedBlock renderedBlock)
-    {
-        if (!renderedBlock.Front) return;
-
-        _vertices.Add(new Vector3(0, 0, 1) + renderedBlock.Position);
-        _vertices.Add(new Vector3(1, 0, 1) + renderedBlock.Position);
-        _vertices.Add(new Vector3(0, 1, 1) + renderedBlock.Position);
-        _vertices.Add(new Vector3(1, 1, 1) + renderedBlock.Position);
-        
-        AddUvs(renderedBlock.BlockType, BlockSide.Front, renderedBlock.Rotate);
-    }
-    
-    private void GenerateBackSide(RenderedBlock renderedBlock)
-    {
-        if (!renderedBlock.Back) return;
-
-        _vertices.Add(new Vector3(0, 0, 0) + renderedBlock.Position);
-        _vertices.Add(new Vector3(0, 1, 0) + renderedBlock.Position);
-        _vertices.Add(new Vector3(1, 0, 0) + renderedBlock.Position);
-        _vertices.Add(new Vector3(1, 1, 0) + renderedBlock.Position);
-        
-        AddUvs(renderedBlock.BlockType, BlockSide.Back, renderedBlock.Rotate);
-    }
-    
-    private void GenerateTopSide(RenderedBlock renderedBlock)
-    {
-        if (!renderedBlock.Top) return;
-
-        _vertices.Add(new Vector3(0, 1, 0) + renderedBlock.Position);
-        _vertices.Add(new Vector3(0, 1, 1) + renderedBlock.Position);
-        _vertices.Add(new Vector3(1, 1, 0) + renderedBlock.Position);
-        _vertices.Add(new Vector3(1, 1, 1) + renderedBlock.Position);
-        
-        AddUvs(renderedBlock.BlockType, BlockSide.Top, renderedBlock.Rotate);
-    }
-    
-    private void GenerateBottomSide(RenderedBlock renderedBlock)
-    {
-        if (!renderedBlock.Bottom) return;
-
-        _vertices.Add(new Vector3(0, 0, 0) + renderedBlock.Position);
-        _vertices.Add(new Vector3(1, 0, 0) + renderedBlock.Position);
-        _vertices.Add(new Vector3(0, 0, 1) + renderedBlock.Position);
-        _vertices.Add(new Vector3(1, 0, 1) + renderedBlock.Position);
-        
-        AddUvs(renderedBlock.BlockType, BlockSide.Bottom, renderedBlock.Rotate);
-    }
-    
-    private void GenerateWaterTopSide(RenderedBlock renderedBlock)
-    {
-        _waterVertices.Add(new Vector3(0, 0.75f, 0) + renderedBlock.Position);
-        _waterVertices.Add(new Vector3(0, 0.75f, 1) + renderedBlock.Position);
-        _waterVertices.Add(new Vector3(1, 0.75f, 0) + renderedBlock.Position);
-        _waterVertices.Add(new Vector3(1, 0.75f, 1) + renderedBlock.Position);
-        
-        AddWaterUvs();
-    }
-
-    private void AddWaterUvs()
-    {
-        _waterUvs.Add(new Vector2(0, 0));
-        _waterUvs.Add(new Vector2(1, 0));
-        _waterUvs.Add(new Vector2(0, 1));
-        _waterUvs.Add(new Vector2(1, 1));
-    }
-    
-    private void AddUvs(BlockType blockType, BlockSide blockSide, int rotation = 0)
-    {
-        var blockTexture = _blockTextureData.GetBlockTexture(blockType);
-
-        if (rotation != 0)
-        {
-            blockSide = (BlockSide)(((int)blockSide + rotation) % 4);
+            WaterMesh.triangles = Array.Empty<int>();
+            WaterMesh.SetVertices(_jobWaterVerts.AsArray().Reinterpret<Vector3>());
+            WaterMesh.SetUVs(0, _jobWaterUvs.AsArray().Reinterpret<Vector2>());
+            WaterMesh.subMeshCount = 1;
+            WaterMesh.SetTriangles(_waterTriangles, 0, waterVertCount * 6 / 4, 0, false);
+            WaterMesh.Optimize();
+            WaterMesh.RecalculateNormals();
+            WaterMesh.bounds = new Bounds(boundsSize / 2f, boundsSize);
+            _waterRenderer.WaterMeshFilter.sharedMesh = WaterMesh;
+            _waterRenderer.WaterMeshCollider.sharedMesh = WaterMesh;
         }
 
-        var index = blockSide switch
-        {
-            BlockSide.Left => blockTexture.LeftSideIndex,
-            BlockSide.Right => blockTexture.RightSideIndex,
-            BlockSide.Front => blockTexture.FrontSideIndex,
-            BlockSide.Back => blockTexture.BackSideIndex,
-            BlockSide.Top => blockTexture.TopSideIndex,
-            BlockSide.Bottom => blockTexture.BottomSideIndex,
-            _ => throw new ArgumentOutOfRangeException(nameof(blockSide), blockSide, null)
-        };
-        
-        var uv = new Vector2(
-            (index % _blockTextureData.CountBlocksInLine) * _blockTextureData.BlockSize / _blockTextureData.TextureSize, 
-            (_blockTextureData.TextureSize - (index / _blockTextureData.CountBlocksInLine + 1) * _blockTextureData.BlockSize) / _blockTextureData.TextureSize
-            );
-    
-        for (int i = 0; i < 4; i++)
-        {
-            _uvs.Add(uv);
-        }
+        // --- Dispose TempJob allocations ---
+        _jobBlocks.Dispose();
+        _jobTerrainVerts.Dispose();
+        _jobTerrainUvs.Dispose();
+        _jobTerrainTris.Dispose();
+        _jobWaterVerts.Dispose();
+        _jobWaterUvs.Dispose();
+        _jobLeavesVerts.Dispose();
+        _jobLeavesUvs.Dispose();
+        _jobMaxY.Dispose();
     }
 
-    private void InitTriangles()
+    public static BlockData GetBlockData(BlockType blockType)
     {
-        if (_trianglesInited) return;
-        _trianglesInited = true;
-        _triangles = new int[65536 * 6 / 4];
-        _waterTriangles = new int[65536 * 6 / 4];
-
-        int vertexNumber = 4;
-        for (int i = 0; i < _triangles.Length; i+= 6)
-        {
-            _triangles[i] = vertexNumber - 4;
-            _triangles[i + 1] = vertexNumber - 3;
-            _triangles[i + 2] = vertexNumber - 2;
-            
-            _triangles[i + 3] = vertexNumber - 3;
-            _triangles[i + 4] = vertexNumber - 1;
-            _triangles[i + 5] = vertexNumber - 2;
-            
-            _waterTriangles[i] = vertexNumber - 4;
-            _waterTriangles[i + 1] = vertexNumber - 3;
-            _waterTriangles[i + 2] = vertexNumber - 2;
-            
-            _waterTriangles[i + 3] = vertexNumber - 3;
-            _waterTriangles[i + 4] = vertexNumber - 1;
-            _waterTriangles[i + 5] = vertexNumber - 2;
-            vertexNumber += 4;
-        }
+        return BlockDatas.GetValueOrDefault(blockType);
     }
 
     private void CreateWater()
     {
         if (_waterRenderer != null) return;
-        _waterRenderer = _chunkFactory.GetWater();
+        _waterRenderer = Pool.Get<WaterRenderer>();
         _waterRenderer.transform.SetParent(transform);
         _waterRenderer.transform.localPosition = Vector3.zero;
         WaterMesh = new Mesh();
+
+        if (_waterRenderer.MeshRenderer.materials.IsNullOrEmpty())
+        {
+            _waterRenderer.MeshRenderer.SetMaterials(new List<Material> { _waterMaterial });
+        }
+    }
+
+    private static void InitTriangles()
+    {
+        if (_trianglesInited) return;
+        _trianglesInited = true;
+        _waterTriangles = new int[65536 * 6 / 4];
+
+        int vertexNumber = 4;
+        for (int i = 0; i < _waterTriangles.Length; i += 6)
+        {
+            _waterTriangles[i]     = vertexNumber - 4;
+            _waterTriangles[i + 1] = vertexNumber - 3;
+            _waterTriangles[i + 2] = vertexNumber - 2;
+            _waterTriangles[i + 3] = vertexNumber - 3;
+            _waterTriangles[i + 4] = vertexNumber - 1;
+            _waterTriangles[i + 5] = vertexNumber - 2;
+            vertexNumber += 4;
+        }
     }
 }

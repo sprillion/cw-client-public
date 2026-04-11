@@ -1,6 +1,6 @@
-﻿using System;
-using factories.inventory;
+﻿using factories.inventory;
 using infrastructure.services.npc;
+using infrastructure.services.players;
 using TMPro;
 using ui.tools;
 using UnityEngine;
@@ -16,38 +16,43 @@ namespace ui.npc
         [SerializeField] private Button _buyButton;
 
         private IInventoryFactory _inventoryFactory;
+        private INpcService _npcService;
+        private ICharacterService _characterService;
         public ItemToPurchasing CurrentItem { get; private set; }
 
-        public event Action<int> OnBuy;
 
         [Inject]
-        public void Construct(IInventoryFactory inventoryFactory)
+        public void Construct(IInventoryFactory inventoryFactory, INpcService npcService, ICharacterService characterService)
         {
             _inventoryFactory = inventoryFactory;
+            _npcService = npcService;
+            _characterService = characterService;
             
             _buyButton.onClick.AddListener(Buy);
         }
-
-        public override void Release()
-        {
-            OnBuy = null;
-            base.Release();
-        }
-
+        
         public void SetItem(ItemToPurchasing item)
         {
             CurrentItem = item;
+            _iconImage.sprite = _inventoryFactory.GetItemData(CurrentItem.Item.Id).Icon;
+            UpdateInfo();
+        }
 
-            _iconImage.sprite = _inventoryFactory.GetItemData(item.Item.Id).Icon;
-            var iconCurrency = item.CurrencyType == CurrencyType.Gold ? IconType.Gold : IconType.Diamond;
-            _priceText.text = $"{iconCurrency.ToIcon()} {item.Price}";
+        public void UpdateInfo()
+        {
+            if (CurrentItem == null) return;
+
+            var iconCurrency = CurrentItem.CurrencyType == CurrencyType.Gold ? IconType.Gold : IconType.Diamond;
+            _priceText.text = $"{iconCurrency.ToIcon()} {CurrentItem.Price}";
+
+            _buyButton.interactable = _characterService.CurrentCharacter.CharacterStats.HaveCurrency(CurrentItem.CurrencyType, CurrentItem.Price);
         }
 
         private void Buy()
         {
             if (CurrentItem == null) return;
             
-            OnBuy?.Invoke(CurrentItem.Item.Id);
+            _npcService.BuyItem(CurrentItem.Item.Id);
         }
     }
 }

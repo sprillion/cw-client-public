@@ -37,6 +37,21 @@ namespace tools
             Items[itemData.Id] = itemData.Icon;
             EditorUtility.SetDirty(this);
         }
+
+        [Button]
+        private void UpdateItems()
+        {
+            Items.Clear();
+            var datas = Resources.LoadAll<ItemData>("Data/Inventory");
+            
+            foreach (var itemData in datas)
+            {
+                Items.Add(itemData.Id, itemData.Icon);
+            }
+
+            Resources.UnloadUnusedAssets();
+            EditorUtility.SetDirty(this);
+        }
 #endif
 
     }

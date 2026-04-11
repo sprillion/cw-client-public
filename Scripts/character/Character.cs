@@ -11,7 +11,12 @@ namespace character
         [SerializeField] private InteractDetector _interactDetector;
         [SerializeField] private HandItemsController _handItemsController;
         
+        public int Id { get; set; }
+        public bool IsDead { get; set; }
         public CharacterStats CharacterStats { get; private set; }
+
+        public CharacterMovement CharacterMovement => _characterMovement;
+        public CharacterSkin CharacterSkin => _characterSkin;
         public InteractDetector InteractDetector => _interactDetector;
 
         public HandItemsController HandItemsController => _handItemsController;
@@ -21,12 +26,7 @@ namespace character
         public void Construct(ICharacterFactory characterFactory)
         {
             CharacterStats = characterFactory.CreateCharacterStats();
+            _handItemsController.Initialize();
         }
-
-        public void SetPosition(Vector3 position)
-        {
-            _characterMovement.SetPosition(position);
-        }
-
     }
 }

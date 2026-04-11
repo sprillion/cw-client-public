@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using environment;
 using infrastructure.services.players;
+using infrastructure.services.transport;
 using UnityEngine;
 
 namespace ui.interaction
@@ -13,13 +14,15 @@ namespace ui.interaction
 
         private readonly ICharacterService _characterService;
         private readonly InteractButton _interactButton;
+        private readonly GameObject _interactPanel;
 
         public event Action<IInteractable> OnInteract;
 
-        public Interaction(ICharacterService characterService, InteractButton interactButton)
+        public Interaction(ICharacterService characterService, InteractButton interactButton, GameObject panel)
         {
             _characterService = characterService;
             _interactButton = interactButton;
+            _interactPanel = panel;
             
             _characterService.CurrentCharacter.InteractDetector.OnInteractEnter += AddInteraction;
             _characterService.CurrentCharacter.InteractDetector.OnInteractExit += RemoveInteraction;
@@ -30,6 +33,7 @@ namespace ui.interaction
             var interactable = _interactions.LastOrDefault();
             interactable?.Interact();
             OnInteract?.Invoke(interactable);
+            CheckPanelToDisable(interactable);
         }
 
         private void AddInteraction(IInteractable interaction)
@@ -39,7 +43,8 @@ namespace ui.interaction
             interaction.OnDestroyed += RemoveInteraction;
             
             if (interaction is not MonoBehaviour mb) return;
-            _interactButton.transform.position = mb.transform.position;
+            _interactPanel.transform.position = mb.transform.position;
+            _interactPanel.SetActive(true);
             _interactButton.gameObject.SetActive(true);
         }
 
@@ -52,12 +57,19 @@ namespace ui.interaction
             if (_interactions.Count == 0)
             {
                 _interactButton.gameObject.SetActive(false);
+                _interactPanel.SetActive(false);
             }
             else
             {
                 if (_interactions.LastOrDefault() is not MonoBehaviour mb) return;
-                _interactButton.transform.position = mb.transform.position;
+                _interactPanel.transform.position = mb.transform.position;
             }
+        }
+
+        private void CheckPanelToDisable(IInteractable interactable)
+        {
+            if (interactable is not TransportInteractTrigger) return;
+            _interactPanel.SetActive(false);
         }
     }
 }

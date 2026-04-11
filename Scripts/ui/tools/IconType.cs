@@ -8,7 +8,10 @@ namespace ui.tools
         Diamond,
         Health,
         Exp,
-        Level
+        Level,
+        Armor,
+        Damage,
+        AttackSpeed,
     }
 }
 

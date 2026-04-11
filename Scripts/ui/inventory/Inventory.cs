@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
 using factories.inventory;
+using infrastructure.factories;
 using infrastructure.services.chests;
 using infrastructure.services.inventory;
 using infrastructure.services.inventory.items;
+using Sirenix.Utilities;
+using ui.inventory.character;
 using ui.popup;
 using ui.quickPanel;
 using UnityEngine;
@@ -17,7 +20,10 @@ namespace ui.inventory
     public class Inventory : Popup
     {
         [SerializeField] private List<Popup> _popupsToClose;
-        [SerializeField] private GameObject _background;
+        [SerializeField] private CharacterPopup _characterPopup;
+        [SerializeField] private PurchasingSlotPopup _purchasingSlotPopup;
+
+        [SerializeField] private ItemInfo _itemInfo;
         
         [SerializeField] private Transform _movingItemsParent;
         [SerializeField] private Transform _slotParent;
@@ -28,8 +34,8 @@ namespace ui.inventory
         private IInventoryService _inventoryService;
         private IInventoryFactory _inventoryFactory;
         private IChestsService _chestsService;
-        
-        private readonly List<Slot> _slots = new List<Slot>();
+
+        private readonly Dictionary<int, Slot> _slots = new Dictionary<int, Slot>();
         private readonly List<GameObject> _lockedSlots = new List<GameObject>();
         private readonly List<UiItem> _items = new List<UiItem>();
 
@@ -47,34 +53,46 @@ namespace ui.inventory
         public override void Initialize()
         {
             _closeButton.onClick.AddListener(Back);
-            _closeBGButton.onClick.AddListener(Back);
 
             _chestsService.OnGetAllItems += LaunchHide;
             _inventoryService.OnSlotUpdated += UpdateSlot;
+            _inventoryService.OnSlotBuyed += OnSlotBuyed;
             
             CreateSlots(_inventoryService.CountSlots, _inventoryService.MaxCountSlots);
             CreateAllItems();
+            
+            _itemInfo.Initialize();
+            _purchasingSlotPopup.Initialize();
         }
 
         public override void Show()
         {
             _quickPanel.EnableEditor();
-            _background.SetActive(true);
             base.Show();
         }
 
         public override void Hide()
         {
             _quickPanel.DisableEditor();
-            _popupsToClose.ForEach(popup => popup.Hide());
-            _background.SetActive(false);
+            _popupsToClose.ForEach(popup => popup.Back());
             base.Hide();
         }
         
         private void OnDestroy()
         {
             _closeButton.onClick.RemoveListener(Hide);
-            _closeBGButton.onClick.RemoveListener(Hide);
+        }
+
+        private void OnEnable()
+        {
+            _closeBGButton.gameObject.SetActive(true);
+            _closeBGButton.onClick.AddListener(Back);
+        }
+
+        private void OnDisable()
+        {
+            _closeBGButton.gameObject.SetActive(false);
+            _closeBGButton.onClick.RemoveListener(Back);
         }
 
         private void CreateSlots(int countSlots, int maxCountSlots)
@@ -90,16 +108,36 @@ namespace ui.inventory
             {
                 AddLockedSlot();
             }
+            
+            AddQuickSlots();
+            AddEquipSlots();
         }
 
         private void AddSlot(int id)
         {
             var slot = _inventoryFactory.GetSlot();
             slot.CanDropHere = true;
-            _slots.Add(slot);
+            _slots.Add(id, slot);
             slot.SetId(id);
             slot.transform.SetParent(_slotParent);
             slot.transform.SetSiblingIndex(id);
+            slot.transform.localScale = Vector3.one;
+        }
+
+        private void AddQuickSlots()
+        {
+            foreach (var quickPanelSlot in _quickPanel.Slots)
+            {
+                _slots.Add(quickPanelSlot.Id, quickPanelSlot);
+            }
+        }
+        
+        private void AddEquipSlots()
+        {
+            foreach (var equipSlot in _characterPopup.EquipSlots)
+            {
+                _slots.Add(equipSlot.Id, equipSlot);
+            }
         }
         
         private void RemoveLockedSlot()
@@ -114,7 +152,10 @@ namespace ui.inventory
         {
             _addSlotButton = _inventoryFactory.GetAddSlot();
             _addSlotButton.transform.SetParent(_slotParent);
+            _addSlotButton.transform.localScale = Vector3.one;
             _addSlotButton.transform.SetAsLastSibling();
+            _addSlotButton.onClick.RemoveAllListeners();
+            _addSlotButton.onClick.AddListener(_purchasingSlotPopup.Show);
         }
 
         private void AddLockedSlot()
@@ -123,6 +164,7 @@ namespace ui.inventory
             _lockedSlots.Add(slot);
             slot.transform.SetParent(_slotParent);
             slot.transform.transform.SetAsLastSibling();
+            slot.transform.localScale = Vector3.one;
         }
 
         private void CreateAllItems()
@@ -133,16 +175,24 @@ namespace ui.inventory
 
         private void CreateItem(Item item)
         {
-            var uiItem = _inventoryFactory.GetItem();
+            var uiItem = Pool.Get<UiItem>();
             uiItem.Initialize(item, _movingItemsParent);
             uiItem.Draggable = true;
-            _slots[item.Slot].SetItem(uiItem);
             _items.Add(uiItem);
+            if (item.Slot >= 0)
+            {
+                _slots[item.Slot].SetItem(uiItem);
+            }
+        }
+
+        private void RemoveItem(Item item)
+        {
+            _slots[item.Slot]?.ClearItem();
         }
 
         private void RemoveAllItems()
         {
-            _slots.ForEach(s => s.ClearItem());
+            _slots.Values.ForEach(s => s.ClearItem());
         }
 
         private void UpdateSlot(Item item)
@@ -151,6 +201,10 @@ namespace ui.inventory
             if (uiItem == null)
             {
                 CreateItem(item);
+            }
+            else if (item.Count == 0)
+            {
+                RemoveItem(item);
             }
         }
 
@@ -163,6 +217,12 @@ namespace ui.inventory
         {
             await UniTask.Delay(TimeSpan.FromSeconds(0.3f));
             Hide();
+        }
+
+        private void OnSlotBuyed()
+        {
+            RemoveLockedSlot();
+            AddSlot(_inventoryService.CountSlots - 1);
         }
     }
 }

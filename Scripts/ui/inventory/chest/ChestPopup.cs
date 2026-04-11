@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using environment.chests;
 using factories.inventory;
+using infrastructure.factories;
 using infrastructure.services.chests;
 using ui.popup;
 using UnityEngine;
@@ -35,13 +36,6 @@ namespace ui.inventory.chest
             }
         }
 
-        public override void Show(Popup backPopup)
-        {
-            _getAllButton.gameObject.SetActive(true);
-            _getAllButton.interactable = true;
-            base.Show(backPopup);
-        }
-
         public override void Hide()
         {
             base.Hide();
@@ -57,6 +51,8 @@ namespace ui.inventory.chest
             _slots.ForEach(s => s.ClearItem());
             _currentChest.OnSetItems += SetItems;
             SetItems();
+            _getAllButton.gameObject.SetActive(true);
+            _getAllButton.interactable = true;
         }
 
         private void SetItems()
@@ -77,8 +73,8 @@ namespace ui.inventory.chest
         {
             var item = _currentChest.Items[index];
             var slot = _slots[index];
-            
-            var uiItem = _inventoryFactory.GetItem();
+
+            var uiItem = Pool.Get<UiItem>();
             
             uiItem.Initialize(item, transform.parent);
             uiItem.Draggable = false;
@@ -93,6 +89,7 @@ namespace ui.inventory.chest
             slot.CanDropHere = false;
             slot.transform.SetParent(_slotsParent);
             slot.transform.SetSiblingIndex(_slots.Count);
+            slot.transform.localScale = Vector3.one;
             slot.SetId(index);
             _slots.Add(slot);
         }

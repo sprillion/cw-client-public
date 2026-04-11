@@ -36,6 +36,16 @@ namespace ui.popup
             Show();
         }
 
+        public virtual void Show(params object[] args)
+        {
+            Show();
+        }
+        
+        public virtual void Show(Popup backPopup, params object[] args)
+        {
+            Show(backPopup);
+        }
+
         public virtual void Hide()
         {
             if (IsActive)

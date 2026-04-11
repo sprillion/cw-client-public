@@ -1,4 +1,5 @@
 ﻿using System;
+using infrastructure.services.npc;
 
 namespace character
 {
@@ -12,6 +13,9 @@ namespace character
         public int Level { get; private set; } 
         public int NeededExperience { get; private set; }
         public int Experience { get; private set; }
+        public int Armor { get; private set; }
+        public int Damage { get; private set; }
+        public float AttackSpeed { get; private set; }
 
         public event Action<int> OnGoldChanged; 
         public event Action<int> OnDiamondsChanged; 
@@ -21,6 +25,9 @@ namespace character
         public event Action<int> OnLevelChanged; 
         public event Action<int> OnNeededExperienceChanged; 
         public event Action<int> OnExperienceChanged; 
+        public event Action<int> OnArmorChanged; 
+        public event Action<int> OnDamageChanged; 
+        public event Action<float> OnAttackSpeedChanged; 
 
         public void SetGold(int value)
         {
@@ -77,6 +84,40 @@ namespace character
             var offset = value - Experience;
             Experience = value;
             OnExperienceChanged?.Invoke(offset);
+        }
+        
+        public void SetArmor(int value)
+        {
+            var offset = value - Armor;
+            Armor = value;
+            OnArmorChanged?.Invoke(offset);
+        }
+        
+        public void SetDamage(int value)
+        {
+            var offset = value - Damage;
+            Damage = value;
+            OnDamageChanged?.Invoke(offset);
+        }
+        
+        public void SetAttackSpeed(float value)
+        {
+            var offset = value - AttackSpeed;
+            AttackSpeed = value;
+            OnAttackSpeedChanged?.Invoke(offset);
+        }
+
+        public bool HaveCurrency(CurrencyType currencyType, int value)
+        {
+            switch (currencyType)
+            {
+                case CurrencyType.Gold:
+                    return Gold >= value;
+                case CurrencyType.Diamonds:
+                    return Diamonds + PurchasedDiamonds >= value;
+                default:
+                    return false;
+            }
         }
     }
 }

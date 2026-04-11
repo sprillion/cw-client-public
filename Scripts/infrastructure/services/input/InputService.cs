@@ -8,20 +8,24 @@ namespace infrastructure.services.input
         private readonly IPlayerInputController _playerInputController;
         
         private float _angle;
-        private bool _interact;
-
         private bool _angleChanged;
 
         private bool _cursorUnlockedStrong;
         
         public Vector2 Move { get; private set; }
-        
+
+        public bool FullInputEnabled { get; private set; } = true;
         public bool CursorIsLocked { get; private set; }
+        public bool IsMobile { get; private set; } = Application.isMobilePlatform;
+        // public bool IsMobile { get; private set; } = true;
         public event Action OnAttackEvent;
+        public event Action OnStopAttackEvent;
         public event Action OnJumpEvent;
+        public event Action OnStopJumpEvent;
         public event Action OnChangeCursorEvent;
         public event Action<float> OnZoomEvent;
         public event Action OnBackEvent;
+        public event Action OnInteractEvent;
 
         public InputService(IPlayerInputController playerInputController)
         {
@@ -29,7 +33,9 @@ namespace infrastructure.services.input
             
             _playerInputController.OnMove += OnMove;
             _playerInputController.OnAttack += OnAttack;
+            _playerInputController.OnStopAttack += OnStopAttack;
             _playerInputController.OnJump += OnJump;
+            _playerInputController.OnStopJump += OnStopJump;
             _playerInputController.OnInteract += OnInteract;
             _playerInputController.OnChangeCursor += OnChangeCursor;
             _playerInputController.OnZoom += OnZoom;
@@ -44,6 +50,7 @@ namespace infrastructure.services.input
 
         public void LockCursor(bool strong = false)
         {
+            if (IsMobile) return;
             if (_cursorUnlockedStrong && !strong) return;
             _cursorUnlockedStrong = false;
             
@@ -61,29 +68,49 @@ namespace infrastructure.services.input
             CursorIsLocked = false;
             OnChangeCursorEvent?.Invoke();
         }
-        
-        private void OnMove(Vector2 vector2)
+
+        public void DisableFullInput()
+        {
+            FullInputEnabled = false;
+        }
+
+        public void EnableFullInput()
+        {
+            FullInputEnabled = true;
+        }
+
+        public void OnMove(Vector2 vector2)
         {
             Move = vector2;
         }
 
-        private void OnAttack()
+        public void OnAttack()
         {
             OnAttackEvent?.Invoke();
         }
-
-        private void OnJump()
+        
+        public void OnStopAttack()
+        {
+            OnStopAttackEvent?.Invoke();
+        }
+        
+        public void OnJump()
         {
             OnJumpEvent?.Invoke();
+        }
+        public void OnStopJump()
+        {
+            OnStopJumpEvent?.Invoke();
         }
 
         private void OnInteract()
         {
-            _interact = true;
+            OnInteractEvent?.Invoke();
         }
         
         private void OnChangeCursor()
         {
+            if (IsMobile) return;
             if (_cursorUnlockedStrong) return;
             Cursor.lockState = CursorIsLocked ? CursorLockMode.None : CursorLockMode.Locked;
             CursorIsLocked = !CursorIsLocked;
