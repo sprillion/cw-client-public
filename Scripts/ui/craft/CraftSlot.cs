@@ -32,6 +32,8 @@ namespace ui.craft
         
         public void SetItem(infrastructure.services.craft.Item item, bool isResult)
         {
+            Clear();
+            
             _isResult = isResult;
             
             var uiItem = Pool.Get<UiItem>();

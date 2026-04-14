@@ -9,6 +9,8 @@ namespace infrastructure.services.npc
     {
         [SerializeField] private List<Renderer> _renderers;
         
+        [field: SerializeField] public bool DisablePanel { get; private set; }
+        [field: SerializeField] public bool DisableButton { get; private set; }
         public NpcData NpcData { get; private set; }
         
         public event Action<IInteractable> OnDestroyed;

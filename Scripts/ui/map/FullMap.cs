@@ -46,12 +46,14 @@ namespace ui.map
         private bool _npcMarkersCreated;
         private bool _mineMarkersCreated;
         private bool _lumberMarkersCreated;
+        private bool _houseMarkersCreated;
 
         private readonly Dictionary<int, MapMarker> _playerMarkers = new Dictionary<int, MapMarker>();
         private readonly Dictionary<ushort, MapMarker> _mobMarkers = new Dictionary<ushort, MapMarker>();
         private readonly List<MapMarker> _npcMarkers = new List<MapMarker>();
         private readonly List<MapMarker> _mineMarkers = new List<MapMarker>();
         private readonly List<MapMarker> _lumberMarkers = new List<MapMarker>();
+        private readonly List<MapMarker> _houseMarkers = new List<MapMarker>();
 
         private MapMarker _waypointMarker;
 
@@ -121,6 +123,7 @@ namespace ui.map
             _npcMarkersCreated = false;
             _mineMarkersCreated = false;
             _lumberMarkersCreated = false;
+            _houseMarkersCreated = false;
             base.Hide();
         }
 
@@ -141,6 +144,9 @@ namespace ui.map
             UpdateOtherPlayerMarkers();
             UpdateMobMarkers();
             UpdateNpcMarkers();
+            UpdateMineMarkers();
+            UpdateLumberMarkers();
+            UpdateHouseMarkers();
 
             if (_waypointMarker != null && _waypointService.WaypointPosition.HasValue)
                 _waypointMarker.transform.localPosition = WorldToLocal(_waypointService.WaypointPosition.Value);
@@ -239,12 +245,14 @@ namespace ui.map
             foreach (var marker in _npcMarkers) marker.Release();
             foreach (var marker in _mineMarkers) marker.Release();
             foreach (var marker in _lumberMarkers) marker.Release();
+            foreach (var marker in _houseMarkers) marker.Release();
 
             _playerMarkers.Clear();
             _mobMarkers.Clear();
             _npcMarkers.Clear();
             _mineMarkers.Clear();
             _lumberMarkers.Clear();
+            _houseMarkers.Clear();
         }
 
         private void UpdateOtherPlayerMarkers()
@@ -287,61 +295,89 @@ namespace ui.map
 
         private void UpdateNpcMarkers()
         {
-            var npcPoints = _mapMarkerService.NpcConfigPoints;
-            if (!_npcMarkersCreated && npcPoints.Count > 0)
+            var points = _mapMarkerService.NpcConfigPoints;
+            if (!_npcMarkersCreated && points.Count > 0)
             {
                 _npcMarkersCreated = true;
-                var npcData = _mapMarkerService.GetIconData(MapIconType.Npc);
-                foreach (var point in npcPoints)
+                var data = _mapMarkerService.GetIconData(MapIconType.Npc);
+                foreach (var point in points)
                 {
                     var marker = Pool.Get<MapMarker>();
                     marker.transform.SetParent(_iconsLayer, false);
-                    marker.SetData(_mapMarkerService.GetNpcSprite(point.Type), npcData.Color, npcData.Size);
+                    marker.SetData(_mapMarkerService.GetNpcSprite(point.Type), data.Color, data.Size);
                     marker.SetVisible(_mapMarkerService.IsTypeVisible(MapIconType.Npc));
                     _npcMarkers.Add(marker);
                 }
             }
 
-            var minePoints = _mapMarkerService.MineConfigPoints;
-            if (!_mineMarkersCreated && minePoints.Count > 0)
+            for (int i = 0; i < _npcMarkers.Count; i++)
+                _npcMarkers[i].transform.localPosition = WorldToLocal(points[i].Position);
+        }
+
+        private void UpdateMineMarkers()
+        {
+            var points = _mapMarkerService.MineConfigPoints;
+            if (!_mineMarkersCreated && points.Count > 0)
             {
                 _mineMarkersCreated = true;
-                var mineData = _mapMarkerService.GetIconData(MapIconType.Mine);
-                foreach (var pos in minePoints)
+                var data = _mapMarkerService.GetIconData(MapIconType.Mine);
+                foreach (var _ in points)
                 {
                     var marker = Pool.Get<MapMarker>();
                     marker.transform.SetParent(_iconsLayer, false);
-                    if (mineData != null)
-                        marker.SetData(mineData.Icon, mineData.Color, mineData.Size);
+                    if (data != null)
+                        marker.SetData(data.Icon, data.Color, data.Size);
                     marker.SetVisible(_mapMarkerService.IsTypeVisible(MapIconType.Mine));
                     _mineMarkers.Add(marker);
                 }
             }
 
-            for (int i = 0; i < _npcMarkers.Count; i++)
-                _npcMarkers[i].transform.localPosition = WorldToLocal(npcPoints[i].Position);
-
             for (int i = 0; i < _mineMarkers.Count; i++)
-                _mineMarkers[i].transform.localPosition = WorldToLocal(minePoints[i]);
+                _mineMarkers[i].transform.localPosition = WorldToLocal(points[i]);
+        }
 
-            var lumberPoints = _mapMarkerService.LumberAreaPoints;
-            if (!_lumberMarkersCreated && lumberPoints.Count > 0)
+        private void UpdateLumberMarkers()
+        {
+            var points = _mapMarkerService.LumberAreaPoints;
+            if (!_lumberMarkersCreated && points.Count > 0)
             {
                 _lumberMarkersCreated = true;
-                var lumberData = _mapMarkerService.GetIconData(MapIconType.Lumber);
-                foreach (var pos in lumberPoints)
+                var data = _mapMarkerService.GetIconData(MapIconType.Lumber);
+                foreach (var _ in points)
                 {
                     var marker = Pool.Get<MapMarker>();
                     marker.transform.SetParent(_iconsLayer, false);
-                    if (lumberData != null)
-                        marker.SetData(lumberData.Icon, lumberData.Color, lumberData.Size);
+                    if (data != null)
+                        marker.SetData(data.Icon, data.Color, data.Size);
                     marker.SetVisible(_mapMarkerService.IsTypeVisible(MapIconType.Lumber));
                     _lumberMarkers.Add(marker);
                 }
             }
 
             for (int i = 0; i < _lumberMarkers.Count; i++)
-                _lumberMarkers[i].transform.localPosition = WorldToLocal(lumberPoints[i]);
+                _lumberMarkers[i].transform.localPosition = WorldToLocal(points[i]);
+        }
+
+        private void UpdateHouseMarkers()
+        {
+            var points = _mapMarkerService.HouseConfigPoints;
+            if (!_houseMarkersCreated && points.Count > 0)
+            {
+                _houseMarkersCreated = true;
+                var data = _mapMarkerService.GetIconData(MapIconType.House);
+                foreach (var _ in points)
+                {
+                    var marker = Pool.Get<MapMarker>();
+                    marker.transform.SetParent(_iconsLayer, false);
+                    if (data != null)
+                        marker.SetData(data.Icon, data.Color, data.Size);
+                    marker.SetVisible(_mapMarkerService.IsTypeVisible(MapIconType.House));
+                    _houseMarkers.Add(marker);
+                }
+            }
+
+            for (int i = 0; i < _houseMarkers.Count; i++)
+                _houseMarkers[i].transform.localPosition = WorldToLocal(points[i]);
         }
 
         private void RemoveStaleMarkers<TKey, TEntity>(
@@ -380,6 +416,9 @@ namespace ui.map
                     break;
                 case MapIconType.Lumber:
                     foreach (var m in _lumberMarkers) m.SetVisible(visible);
+                    break;
+                case MapIconType.House:
+                    foreach (var m in _houseMarkers) m.SetVisible(visible);
                     break;
                 case MapIconType.LocalPlayer:
                     if (_localPlayerIcon != null) _localPlayerIcon.gameObject.SetActive(visible);

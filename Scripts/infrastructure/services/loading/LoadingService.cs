@@ -6,6 +6,7 @@ using infrastructure.services.clan;
 using infrastructure.services.platform;
 using infrastructure.services.craft;
 using infrastructure.services.gameLoop;
+using infrastructure.services.house;
 using infrastructure.services.input;
 using infrastructure.services.inventory;
 using infrastructure.services.map;
@@ -35,6 +36,7 @@ namespace infrastructure.services.loading
         private ICharacterService _characterService;
         private INpcService _npcService;
         private ICraftService _craftService;
+        private IHouseService _houseService;
         private IShopService _shopService;
         private IClanService _clanService;
         private ITransportService _transportService;
@@ -81,6 +83,7 @@ namespace infrastructure.services.loading
             ICharacterService characterService,
             INpcService npcService,
             ICraftService craftService,
+            IHouseService houseService,
             IShopService shopService,
             IClanService clanService,
             ITransportService transportService
@@ -97,6 +100,7 @@ namespace infrastructure.services.loading
             _characterService = characterService;
             _npcService = npcService;
             _craftService = craftService;
+            _houseService = houseService;
             _shopService = shopService;
             _clanService = clanService;
             _transportService = transportService;
@@ -252,6 +256,7 @@ namespace infrastructure.services.loading
             _playerLoaded = true;
             CheckToCreateMap();
             _gameLoop.AddToUnityThread(_craftService.LoadCraftData);
+            _gameLoop.AddToUnityThread(_houseService.LoadHouseConfig);
         }
 
         private void OnInventoryLoaded()

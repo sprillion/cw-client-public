@@ -11,6 +11,7 @@ namespace infrastructure.services.house
         event Action OnHouseReceived;
         event Action<bool> OnPlotStatusReceived;
         event Action<bool> OnBuyPlotResult;
+        event Action<HousePlaceType, bool> OnUpgradeResult;
 
         HousePlaceInfo GetHousePlaceInfo(HousePlaceType housePlaceType);
         void GetHouse();
@@ -19,5 +20,12 @@ namespace infrastructure.services.house
         void BuyPlot();
         void StartUpgrade(HousePlaceType housePlaceType);
         void ApplyUpgrade(HousePlaceType housePlaceType);
+
+        void LoadHouseConfig();
+        HousePlaceCraftData GetHouseUpgradeData(HousePlaceType type, int currentLevel);
+        bool IsCurrentUpgrade(HousePlaceType type);
+        bool IsCompleteUpgrade(HousePlaceType type);
+        public bool IsMaxLevel(HousePlaceType type);
+        DateTime GetFinishTimeUpgrade(HousePlaceType type);
     }
 }

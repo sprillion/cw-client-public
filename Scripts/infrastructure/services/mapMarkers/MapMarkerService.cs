@@ -51,6 +51,7 @@ namespace infrastructure.services.mapMarkers
         public IReadOnlyList<NpcMapPoint> NpcConfigPoints => _npcConfigPoints;
         public IReadOnlyList<Vector3> MineConfigPoints => _mineConfigPoints;
         public IReadOnlyList<Vector3> LumberAreaPoints => _lumberAreaPoints;
+        public IReadOnlyList<Vector3> HouseConfigPoints => _houseConfigPoints;
 
         public event Action<MapIconType, bool> OnVisibilityChanged;
 

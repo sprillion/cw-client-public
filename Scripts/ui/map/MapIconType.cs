@@ -8,6 +8,7 @@ namespace ui.map
         Npc,
         Waypoint,
         Mine,
-        Lumber
+        Lumber,
+        House,
     }
 }

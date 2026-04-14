@@ -256,7 +256,7 @@ namespace infrastructure.services.map
         {
             if (_updated) return;
             _updated = true;
-            Debug.Log($"[MapService] UpdateChunks started. ChunkDatas: {ChunkDatas.Count}, renderRadius: {_renderRadius}");
+            // Debug.Log($"[MapService] UpdateChunks started. ChunkDatas: {ChunkDatas.Count}, renderRadius: {_renderRadius}");
             _newChunks.Clear();
 
             var toSchedule = new List<ChunkRenderer>();
@@ -302,7 +302,7 @@ namespace infrastructure.services.map
             _newChunks.ForEach(chunk => _chunks.TryAdd(chunk.ChunkData.Position, chunk));
             _updated = false;
 
-            Debug.Log($"[MapService] UpdateChunks done. Active chunks: {_chunks.Count}. Invoking ChunksUpdated.");
+            // Debug.Log($"[MapService] UpdateChunks done. Active chunks: {_chunks.Count}. Invoking ChunksUpdated.");
             ChunksUpdated?.Invoke();
         }
     }

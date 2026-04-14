@@ -1,5 +1,4 @@
-﻿using System;
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using environment;
 using environment.chests;
 using environment.house;
@@ -37,6 +36,7 @@ namespace infrastructure.services.ui
 {
     public class UiService : MonoBehaviour, IUiService
     {
+        [Header("Views")]
         [SerializeField] private Inventory _inventory;
         [SerializeField] private ChestPopup _chestPopup;
         [SerializeField] private CharacterPopup _characterPopup;
@@ -44,7 +44,6 @@ namespace infrastructure.services.ui
         [SerializeField] private QuestsInfoPopup _questsInfoPopup;
         [SerializeField] private ConfirmView _confirmView;
         [SerializeField] private DeathView _deathView;
-        [SerializeField] private HouseView _houseView;
         [SerializeField] private BuyPlotView _buyPlotView;
         [SerializeField] private ShopView _shopView;
         [SerializeField] private MineView _mineView;
@@ -57,8 +56,13 @@ namespace infrastructure.services.ui
         [SerializeField] private QuickPanel _quickPanel;
         [SerializeField] private StatsPanel _statsPanel;
         
+        [Header("Interaction")]
         [SerializeField] private InteractButton _interactButton;
         [SerializeField] private GameObject _interactPanel;
+
+        [Header("Canvases")]
+        [SerializeField] private GameObject _allCanvases;
+        [SerializeField] private GameObject _chatCanvases;
 
         private ILoadingService _loadingService;
         private INpcService _npcService;
@@ -115,7 +119,6 @@ namespace infrastructure.services.ui
             _npcPopup.Initialize();
             _confirmView.Initialize();
             _deathView.Initialize();
-            _houseView.Initialize();
             _buyPlotView.Initialize();
             _shopView.Initialize();
             _mineView.Initialize();
@@ -153,6 +156,8 @@ namespace infrastructure.services.ui
                     break;
             }
         }
+
+        public void SetAllCanvasesActive(bool active) => _allCanvases.SetActive(active);
 
         private void HandlePlotStatus(bool hasPlot)
         {

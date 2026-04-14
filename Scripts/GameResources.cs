@@ -25,6 +25,8 @@ public static class GameResources
     {
     private static ScriptableObject _currency_product_catalog;
     public static T currency_product_catalog<T>() where T : ScriptableObject{if (_currency_product_catalog == null)  _currency_product_catalog = Resources.Load<T>("Data/Catalogs/CurrencyProductCatalog");return _currency_product_catalog as T;}
+    private static ScriptableObject _house_icons_catalog;
+    public static T house_icons_catalog<T>() where T : ScriptableObject{if (_house_icons_catalog == null)  _house_icons_catalog = Resources.Load<T>("Data/Catalogs/HouseIconsCatalog");return _house_icons_catalog as T;}
     private static ScriptableObject _map_icons_catalog;
     public static T map_icons_catalog<T>() where T : ScriptableObject{if (_map_icons_catalog == null)  _map_icons_catalog = Resources.Load<T>("Data/Catalogs/MapIconsCatalog");return _map_icons_catalog as T;}
     private static ScriptableObject _mob_icons;
@@ -613,6 +615,7 @@ public static class GameResources
     public static class Crafts
     {
     public static GameObject craft => Resources.Load<GameObject>("Prefabs/Ui/Crafts/Craft");
+    public static GameObject craft_house_button => Resources.Load<GameObject>("Prefabs/Ui/Crafts/CraftHouseButton");
     public static GameObject craft_slot => Resources.Load<GameObject>("Prefabs/Ui/Crafts/CraftSlot");
     }
 

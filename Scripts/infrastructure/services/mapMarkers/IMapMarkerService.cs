@@ -16,6 +16,7 @@ namespace infrastructure.services.mapMarkers
         IReadOnlyList<NpcMapPoint> NpcConfigPoints { get; }
         IReadOnlyList<Vector3> MineConfigPoints { get; }
         IReadOnlyList<Vector3> LumberAreaPoints { get; }
+        IReadOnlyList<Vector3> HouseConfigPoints { get; }
 
         bool IsTypeVisible(MapIconType type);
         void SetTypeVisible(MapIconType type, bool visible);

@@ -24,7 +24,7 @@ namespace ui.house
             _workbenchButton.onClick.AddListener(() => ShowCraftView(CraftPlaceType.Workbench));
             _furnaceButton.onClick.AddListener(() => ShowCraftView(CraftPlaceType.Furnace));
             _anvilButton.onClick.AddListener(() => ShowCraftView(CraftPlaceType.Anvil));
-            _potionMakerButton.onClick.AddListener(() => ShowCraftView(CraftPlaceType.PotionMaker));
+            _potionMakerButton.onClick.AddListener(() => ShowCraftView(CraftPlaceType.Brewing));
             
             _closeButton.onClick.AddListener(Hide);
         }

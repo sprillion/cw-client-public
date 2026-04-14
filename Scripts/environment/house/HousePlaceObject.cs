@@ -33,7 +33,10 @@ namespace environment.house
         public bool CanShowButton(HousePlaceInfo info, int houseLevel)
         {
             if (info == null) return false;
-            return info.RequiredHouseLevel == 0 || houseLevel >= info.RequiredHouseLevel;
+            if (info.Level == -1) return true;
+            if (info.HousePlaceType == HousePlaceType.House) return true;
+
+            return info.Level > 0 || houseLevel >= info.RequiredHouseLevel;
         }
     }
 }

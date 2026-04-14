@@ -13,5 +13,6 @@ namespace infrastructure.services.ui
         QuestsInfoPopup QuestsInfoPopup { get; }
         ConfirmView ConfirmView { get; }
         AdminPanelView AdminPanel { get; }
+        void SetAllCanvasesActive(bool active);
     }
 }

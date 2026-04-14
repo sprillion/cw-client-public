@@ -1,7 +1,6 @@
-using infrastructure.services.house;
 using infrastructure.services.interior;
-using ui.house;
 using UnityEngine;
+using Zenject;
 
 namespace environment.interior
 {
@@ -10,27 +9,28 @@ namespace environment.interior
         [SerializeField] private InteriorType _type;
         [SerializeField] private Vector3 _worldPosition;
         [SerializeField] private bool _disablePlayer;
+        [SerializeField] private bool _disableAllCanvases;
         [SerializeField] private bool _hideOtherCharactersAndMobs;
+        [SerializeField] private bool _hasOwnCamera;
 
+        private IInteriorService _interiorService;
+        
         public InteriorType Type => _type;
         public bool DisablePlayer => _disablePlayer;
+        public bool DisableAllCanvases => _disableAllCanvases;
         public bool HideOtherCharactersAndMobs => _hideOtherCharactersAndMobs;
+        public bool HasOwnCamera => _hasOwnCamera;
+        
 
-        public void Initialize(IInteriorService interiorService, IHouseService houseService = null)
+        [Inject]
+        public void Construct(IInteriorService interiorService)
+        {
+            _interiorService = interiorService;
+        }
+
+        public void Start()
         {
             transform.position = _worldPosition;
-
-            foreach (var exit in GetComponentsInChildren<InteriorExit>())
-                exit.Initialize(interiorService);
-
-            if (houseService != null)
-            {
-                houseService.GetHouse();
-                houseService.GetCurrentHouseUpgrades();
-
-                var housePlaceButtonsView = GetComponentInChildren<HousePlaceButtonsView>(true);
-                housePlaceButtonsView?.Initialize(houseService);
-            }
         }
     }
 }

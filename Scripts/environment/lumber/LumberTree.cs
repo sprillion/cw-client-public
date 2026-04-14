@@ -12,6 +12,8 @@ namespace environment.lumber
         [SerializeField] private GameObject _grownTree;
         [SerializeField] private GameObject _sprout;
 
+        [field: SerializeField] public bool DisablePanel { get; private set; }
+        [field: SerializeField] public bool DisableButton { get; private set; }
         public int TreeId { get; set; }
 
         public event Action<IInteractable> OnDestroyed;

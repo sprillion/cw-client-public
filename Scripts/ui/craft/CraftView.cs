@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using I2.Loc;
 using infrastructure.factories;
 using infrastructure.services.craft;
 using TMPro;
+using ui.house;
 using ui.popup;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,32 +17,42 @@ namespace ui.craft
         [SerializeField] private Transform _craftsParent;
         [SerializeField] private TMP_Text _titleText;
         [SerializeField] private Button _closeButton;
+        [SerializeField] private Button _upgradeHouseButton;
+        
+        [SerializeField] private UpgradeHouseView _upgradeHouseView;
+
+        private CraftPlaceType _currentCraftPlaceType;
          
         private ICraftService _craftService;
         private List<CraftDataJson> _currentCraftsData;
 
         private readonly List<CraftElement> _currentCraftsElements = new List<CraftElement>();
         
-        
         [Inject]
         public void Construct(ICraftService craftService)
         {
             _craftService = craftService;
         }
-        
+
+        private void Start()
+        {
+            Initialize();
+        }
+
         public override void Initialize()
         {
             Pool.CreatePool<CraftElement>(20);
             _closeButton.onClick.AddListener(Back);
+            _upgradeHouseButton.onClick.AddListener(ShowUpgradeView);
         }
 
         public override void Show(Popup backPopup, params object[] args)
         {
-            CraftPlaceType craftPlaceType = (CraftPlaceType)args[0];
+            _currentCraftPlaceType = (CraftPlaceType)args[0];
             
-            SetTitle(craftPlaceType);
+            SetTitle(_currentCraftPlaceType);
 
-            _currentCraftsData = _craftService.GetCraftsFromPlace(craftPlaceType);
+            _currentCraftsData = _craftService.GetCraftsFromPlace(_currentCraftPlaceType);
             FillCrafts();
 
             _craftService.OnCraftsUpdated += FillCrafts;
@@ -54,6 +66,14 @@ namespace ui.craft
             base.Hide();
         }
 
+        public override void AddToStack()
+        {
+        }
+
+        public override void RemoveFromStack()
+        {
+        }
+
         private void SetTitle(CraftPlaceType craftPlaceType)
         {
             _titleText.text = LocalizationManager.GetTranslation($"House/{craftPlaceType}");
@@ -61,7 +81,6 @@ namespace ui.craft
 
         private void FillCrafts()
         {
-            Debug.Log("UPDATE CRAFTS");
             ClearCrafts();
 
             foreach (var craftData in _currentCraftsData)
@@ -76,6 +95,8 @@ namespace ui.craft
             {
                 element.Release();
             }
+            
+            _currentCraftsElements.Clear();
         }
 
         private void CreateCraft(CraftDataJson craftData)
@@ -84,6 +105,11 @@ namespace ui.craft
             element.SetParentPreserveScale(_craftsParent);
             element.SetData(craftData);
             _currentCraftsElements.Add(element);
+        }
+
+        private void ShowUpgradeView()
+        {
+            _upgradeHouseView.Show(this, _currentCraftPlaceType.ToHousePlaceType());
         }
     }
 }

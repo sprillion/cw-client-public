@@ -4,6 +4,7 @@ using infrastructure.services.chests;
 using infrastructure.services.inventory.items;
 using infrastructure.services.ui;
 using Sirenix.Utilities;
+using UnityEngine;
 using Zenject;
 
 namespace environment.chests
@@ -14,7 +15,8 @@ namespace environment.chests
         private IUiService _uiService;
         
         public ushort Id { get; set; }
-
+        [field: SerializeField] public bool DisablePanel { get; private set; }
+        [field: SerializeField] public bool DisableButton { get; private set; }
         public List<Item> Items { get; set; } = new List<Item>();
 
         public event Action OnSetItems;

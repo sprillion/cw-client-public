@@ -34,12 +34,14 @@ namespace ui.map
         private bool _npcMarkersCreated;
         private bool _mineMarkersCreated;
         private bool _lumberMarkersCreated;
+        private bool _houseMarkersCreated;
 
         private readonly Dictionary<int, MapMarker> _playerMarkers = new Dictionary<int, MapMarker>();
         private readonly Dictionary<ushort, MapMarker> _mobMarkers = new Dictionary<ushort, MapMarker>();
         private readonly List<MapMarker> _npcMarkers = new List<MapMarker>();
         private readonly List<MapMarker> _mineMarkers = new List<MapMarker>();
         private readonly List<MapMarker> _lumberMarkers = new List<MapMarker>();
+        private readonly List<MapMarker> _houseMarkers = new List<MapMarker>();
 
         private MapMarker _waypointMarker;
 
@@ -105,6 +107,9 @@ namespace ui.map
             UpdateOtherPlayerMarkers(playerPos, totalZoom);
             UpdateMobMarkers(playerPos, totalZoom);
             UpdateNpcMarkers(playerPos, totalZoom);
+            UpdateMineMarkers(playerPos, totalZoom);
+            UpdateLumberMarkers(playerPos, totalZoom);
+            UpdateHouseMarkers(playerPos, totalZoom);
             UpdateWaypointMarker(playerPos, totalZoom);
         }
 
@@ -175,72 +180,104 @@ namespace ui.map
 
         private void UpdateNpcMarkers(Vector3 playerPos, float totalZoom)
         {
-            var npcPoints = _mapMarkerService.NpcConfigPoints;
-            if (!_npcMarkersCreated && npcPoints.Count > 0)
+            var points = _mapMarkerService.NpcConfigPoints;
+            if (!_npcMarkersCreated && points.Count > 0)
             {
                 _npcMarkersCreated = true;
-                var npcData = _mapMarkerService.GetIconData(MapIconType.Npc);
-                foreach (var point in npcPoints)
+                var data = _mapMarkerService.GetIconData(MapIconType.Npc);
+                foreach (var point in points)
                 {
                     var marker = Pool.Get<MapMarker>();
                     marker.transform.SetParent(_iconsContainer, false);
-                    marker.SetData(_mapMarkerService.GetNpcSprite(point.Type), npcData.Color, npcData.Size);
+                    marker.SetData(_mapMarkerService.GetNpcSprite(point.Type), data.Color, data.Size);
                     _npcMarkers.Add(marker);
                 }
             }
 
-            var minePoints = _mapMarkerService.MineConfigPoints;
-            if (!_mineMarkersCreated && minePoints.Count > 0)
+            bool visible = _mapMarkerService.IsTypeVisible(MapIconType.Npc);
+            for (int i = 0; i < _npcMarkers.Count; i++)
+            {
+                var relPos = points[i].Position - playerPos;
+                _npcMarkers[i].transform.localPosition = new Vector2(relPos.x, relPos.z) * totalZoom;
+                _npcMarkers[i].SetVisible(visible);
+            }
+        }
+
+        private void UpdateMineMarkers(Vector3 playerPos, float totalZoom)
+        {
+            var points = _mapMarkerService.MineConfigPoints;
+            if (!_mineMarkersCreated && points.Count > 0)
             {
                 _mineMarkersCreated = true;
-                var mineData = _mapMarkerService.GetIconData(MapIconType.Mine);
-                foreach (var _ in minePoints)
+                var data = _mapMarkerService.GetIconData(MapIconType.Mine);
+                foreach (var _ in points)
                 {
                     var marker = Pool.Get<MapMarker>();
                     marker.transform.SetParent(_iconsContainer, false);
-                    if (mineData != null)
-                        marker.SetData(mineData.Icon, mineData.Color, mineData.Size);
+                    if (data != null)
+                        marker.SetData(data.Icon, data.Color, data.Size);
                     _mineMarkers.Add(marker);
                 }
             }
 
-            bool npcVisible = _mapMarkerService.IsTypeVisible(MapIconType.Npc);
-            for (int i = 0; i < _npcMarkers.Count; i++)
-            {
-                var relPos = npcPoints[i].Position - playerPos;
-                _npcMarkers[i].transform.localPosition = new Vector2(relPos.x, relPos.z) * totalZoom;
-                _npcMarkers[i].SetVisible(npcVisible);
-            }
-
-            bool mineVisible = _mapMarkerService.IsTypeVisible(MapIconType.Mine);
+            bool visible = _mapMarkerService.IsTypeVisible(MapIconType.Mine);
             for (int i = 0; i < _mineMarkers.Count; i++)
             {
-                var relPos = minePoints[i] - playerPos;
+                var relPos = points[i] - playerPos;
                 _mineMarkers[i].transform.localPosition = new Vector2(relPos.x, relPos.z) * totalZoom;
-                _mineMarkers[i].SetVisible(mineVisible);
+                _mineMarkers[i].SetVisible(visible);
             }
+        }
 
-            var lumberPoints = _mapMarkerService.LumberAreaPoints;
-            if (!_lumberMarkersCreated && lumberPoints.Count > 0)
+        private void UpdateLumberMarkers(Vector3 playerPos, float totalZoom)
+        {
+            var points = _mapMarkerService.LumberAreaPoints;
+            if (!_lumberMarkersCreated && points.Count > 0)
             {
                 _lumberMarkersCreated = true;
-                var lumberData = _mapMarkerService.GetIconData(MapIconType.Lumber);
-                foreach (var _ in lumberPoints)
+                var data = _mapMarkerService.GetIconData(MapIconType.Lumber);
+                foreach (var _ in points)
                 {
                     var marker = Pool.Get<MapMarker>();
                     marker.transform.SetParent(_iconsContainer, false);
-                    if (lumberData != null)
-                        marker.SetData(lumberData.Icon, lumberData.Color, lumberData.Size);
+                    if (data != null)
+                        marker.SetData(data.Icon, data.Color, data.Size);
                     _lumberMarkers.Add(marker);
                 }
             }
 
-            bool lumberVisible = _mapMarkerService.IsTypeVisible(MapIconType.Lumber);
+            bool visible = _mapMarkerService.IsTypeVisible(MapIconType.Lumber);
             for (int i = 0; i < _lumberMarkers.Count; i++)
             {
-                var relPos = lumberPoints[i] - playerPos;
+                var relPos = points[i] - playerPos;
                 _lumberMarkers[i].transform.localPosition = new Vector2(relPos.x, relPos.z) * totalZoom;
-                _lumberMarkers[i].SetVisible(lumberVisible);
+                _lumberMarkers[i].SetVisible(visible);
+            }
+        }
+
+        private void UpdateHouseMarkers(Vector3 playerPos, float totalZoom)
+        {
+            var points = _mapMarkerService.HouseConfigPoints;
+            if (!_houseMarkersCreated && points.Count > 0)
+            {
+                _houseMarkersCreated = true;
+                var data = _mapMarkerService.GetIconData(MapIconType.House);
+                foreach (var _ in points)
+                {
+                    var marker = Pool.Get<MapMarker>();
+                    marker.transform.SetParent(_iconsContainer, false);
+                    if (data != null)
+                        marker.SetData(data.Icon, data.Color, data.Size);
+                    _houseMarkers.Add(marker);
+                }
+            }
+
+            bool visible = _mapMarkerService.IsTypeVisible(MapIconType.House);
+            for (int i = 0; i < _houseMarkers.Count; i++)
+            {
+                var relPos = points[i] - playerPos;
+                _houseMarkers[i].transform.localPosition = new Vector2(relPos.x, relPos.z) * totalZoom;
+                _houseMarkers[i].SetVisible(visible);
             }
         }
 

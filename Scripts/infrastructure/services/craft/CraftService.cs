@@ -155,6 +155,11 @@ namespace infrastructure.services.craft
             var data = await _bundleService.LoadAssetByName<TextAsset>("Crafts");
 
             _craftData = JsonConvert.DeserializeObject<List<CraftDataJson>>(data.text).ToDictionary(d => d.Id, d => d);
+
+            foreach (var pair in _craftData)
+            {
+                Debug.Log($"Key = {pair.Key}   Id = {pair.Value.Id}");
+            }
         }
 
         private void SetAvailableCrafts(Message message)

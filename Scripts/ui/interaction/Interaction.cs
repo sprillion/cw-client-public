@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using environment;
 using infrastructure.services.players;
-using infrastructure.services.transport;
 using UnityEngine;
 
 namespace ui.interaction
@@ -68,8 +67,8 @@ namespace ui.interaction
 
         private void CheckPanelToDisable(IInteractable interactable)
         {
-            if (interactable is not TransportInteractTrigger) return;
-            _interactPanel.SetActive(false);
+            _interactPanel.SetActive(!interactable.DisablePanel);
+            _interactButton.gameObject.SetActive(!interactable.DisableButton);
         }
     }
 }

@@ -6,23 +6,30 @@ using infrastructure.services.craft;
 using infrastructure.services.house;
 using ui.craft;
 using UnityEngine;
+using Zenject;
 
 namespace ui.house
 {
     public class HousePlaceButtonsView : MonoBehaviour
     {
         [SerializeField] private HousePlaceObject[] _places;
-        [SerializeField] private Canvas _canvas;
         [SerializeField] private CraftView _craftView;
+        [SerializeField] private UpgradeHouseView _upgradeHouseView;
 
         private IHouseService _houseService;
         private Camera _camera;
         private readonly Dictionary<HousePlaceType, HousePlaceButton> _activeButtons = new();
 
-        public void Initialize(IHouseService houseService)
+        [Inject]
+        public void Construct(IHouseService houseService)
         {
             _houseService = houseService;
+        }
+
+        public void Start()
+        {
             _camera = Camera.main;
+
             Pool.CreatePool<HousePlaceButton>(6);
             _houseService.OnHouseReceived += Refresh;
         }
@@ -54,8 +61,9 @@ namespace ui.house
             if (_activeButtons.ContainsKey(place.Type)) return;
 
             var btn = Pool.Get<HousePlaceButton>();
-            btn.SetParentPreserveScale(_canvas.transform);
-            btn.Setup(place.ButtonAnchor, _camera, GetButtonClickAction(place));
+            btn.SetParentPreserveScale(transform);
+            btn.Setup(place.Type, place.ButtonAnchor, _camera, GetButtonClickAction(place));
+
             _activeButtons[place.Type] = btn;
         }
 
@@ -68,13 +76,38 @@ namespace ui.house
 
         protected virtual Action GetButtonClickAction(HousePlaceObject place)
         {
-            return place.Type switch
+            var type = place.Type;
+            return () =>
             {
-                HousePlaceType.Workbench  => () => _craftView.Show(null, CraftPlaceType.Workbench),
-                HousePlaceType.Furnace    => () => _craftView.Show(null, CraftPlaceType.Furnace),
-                HousePlaceType.Anvil      => () => _craftView.Show(null, CraftPlaceType.Anvil),
-                HousePlaceType.PotionRack => () => _craftView.Show(null, CraftPlaceType.PotionMaker),
-                _                         => null
+                var info = _houseService.GetHousePlaceInfo(type);
+
+                if (info == null || info.Level == 0)
+                {
+                    _upgradeHouseView.Show(type);
+                    return;
+                }
+
+                switch (type)
+                {
+                    case HousePlaceType.House:
+                        _upgradeHouseView.Show(HousePlaceType.House);
+                        break;
+                    case HousePlaceType.Workbench:
+                        _craftView.Show(null, CraftPlaceType.Workbench);
+                        break;
+                    case HousePlaceType.Furnace:
+                        _craftView.Show(null, CraftPlaceType.Furnace);
+                        break;
+                    case HousePlaceType.Anvil:
+                        _craftView.Show(null, CraftPlaceType.Anvil);
+                        break;
+                    case HousePlaceType.Brewing:
+                        _craftView.Show(null, CraftPlaceType.Brewing);
+                        break;
+                    case HousePlaceType.Garden:
+                        _craftView.Show(null, CraftPlaceType.Garden);
+                        break;
+                }
             };
         }
     }

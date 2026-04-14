@@ -6,9 +6,11 @@ namespace infrastructure.services.transport
 {
     public class TransportInteractTrigger : MonoBehaviour, IInteractable
     {
-        public event Action<IInteractable> OnDestroyed;
-
         private Transport _transport;
+        
+        [field: SerializeField] public bool DisablePanel { get; private set; }
+        [field: SerializeField] public bool DisableButton { get; private set; }
+        public event Action<IInteractable> OnDestroyed;
 
         public void Initialize(Transport transport)
         {

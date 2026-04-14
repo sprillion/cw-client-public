@@ -22,17 +22,14 @@ namespace ui.popup
 
         public virtual void Show()
         {
-            if (!IsActive)
-            {
-                _popupService.AddPopup(this);
-            }
+            AddToStack();
             gameObject.SetActive(true);
         }
 
         public virtual void Show(Popup backPopup)
         {
             _backPopup = backPopup;
-            _backPopup.Hide();
+            _backPopup?.Hide();
             Show();
         }
 
@@ -48,10 +45,7 @@ namespace ui.popup
 
         public virtual void Hide()
         {
-            if (IsActive)
-            {
-                _popupService.RemovePopup(this);
-            }
+            RemoveFromStack();
             gameObject.SetActive(false);
         }
 
@@ -63,6 +57,22 @@ namespace ui.popup
                 _backPopup = null;
             }
             Hide();
+        }
+
+        public virtual void AddToStack()
+        {
+            if (!IsActive)
+            {
+                _popupService.AddPopup(this);
+            }
+        }
+        
+        public virtual void RemoveFromStack()
+        {
+            if (IsActive)
+            {
+                _popupService.RemovePopup(this);
+            }
         }
     }
 }
